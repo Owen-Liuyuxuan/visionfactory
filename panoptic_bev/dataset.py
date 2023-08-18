@@ -1,5 +1,4 @@
 import os
-import cv2
 import umsgpack
 import numpy as np
 import json

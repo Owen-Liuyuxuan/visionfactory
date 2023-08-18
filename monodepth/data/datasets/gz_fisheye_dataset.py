@@ -4,7 +4,6 @@ import numpy as np
 import cv2
 from easydict import EasyDict
 import yaml
-import csv
 
 from copy import deepcopy
 from torch.utils.data import Dataset, DataLoader # noqa: F401

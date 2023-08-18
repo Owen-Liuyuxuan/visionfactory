@@ -2,7 +2,7 @@ import shutil
 import os
 import numpy as np
 class KittiResultWriter(object):
-    def __init__(self, result_dir:str, 
+    def __init__(self, result_dir:str,
                  obj_mapping={'car': 'Car', 'pedestrian': 'Pedestrian', 'bicycle': 'Cyclist', 'truck': 'Truck'}):
         self.result_dir = result_dir
         self.obj_mapping = obj_mapping

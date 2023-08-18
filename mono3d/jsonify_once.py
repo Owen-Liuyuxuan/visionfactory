@@ -1,5 +1,5 @@
 """
-The core idea is to produce a unified json data description file for ONCE dataset. 
+The core idea is to produce a unified json data description file for ONCE dataset.
 
 1. Unify classes annotations. We know there are categories in nuScenes not labeled in ONCE. We need to know that whether we are labeling each category in each image. If a category is not labeled in this image, we should not supress the prediction/evaluation of this category during training.
 2. We need to unify the coordination, rotation.
@@ -7,7 +7,7 @@ The core idea is to produce a unified json data description file for ONCE datase
 4. We allow images with 2D labels.
 5. Suggested data augmentation methods in training: RandomWarpAffine.
 
-Suggested unified Types: 
+Suggested unified Types:
 
 ['car', 'truck', 'bus', 'trailer', 'construction_vehicle', 'pedestrian', 'motorcycle', 'bicycle', 'traffic_cone', 'barrier']
 
@@ -17,7 +17,6 @@ import numpy as np
 import math
 import os
 import json
-from PIL import Image
 import tqdm
 from pyquaternion import Quaternion
 import cv2
@@ -35,26 +34,26 @@ SCENES = [f"{index:06d}" for index in [76, 80, 92, 104, 113, 121]]
 
  
 def euler_from_quaternion(x, y, z, w):
-        """
-        Convert a quaternion into euler angles (roll, pitch, yaw)
-        roll is rotation around x in radians (counterclockwise)
-        pitch is rotation around y in radians (counterclockwise)
-        yaw is rotation around z in radians (counterclockwise)
-        """
-        t0 = +2.0 * (w * x + y * z)
-        t1 = +1.0 - 2.0 * (x * x + y * y)
-        roll_x = math.atan2(t0, t1)
-     
-        t2 = +2.0 * (w * y - z * x)
-        t2 = +1.0 if t2 > +1.0 else t2
-        t2 = -1.0 if t2 < -1.0 else t2
-        pitch_y = math.asin(t2)
-     
-        t3 = +2.0 * (w * z + x * y)
-        t4 = +1.0 - 2.0 * (y * y + z * z)
-        yaw_z = math.atan2(t3, t4)
-     
-        return roll_x, pitch_y, yaw_z # in radians
+    """
+    Convert a quaternion into euler angles (roll, pitch, yaw)
+    roll is rotation around x in radians (counterclockwise)
+    pitch is rotation around y in radians (counterclockwise)
+    yaw is rotation around z in radians (counterclockwise)
+    """
+    t0 = +2.0 * (w * x + y * z)
+    t1 = +1.0 - 2.0 * (x * x + y * y)
+    roll_x = math.atan2(t0, t1)
+
+    t2 = +2.0 * (w * y - z * x)
+    t2 = +1.0 if t2 > +1.0 else t2
+    t2 = -1.0 if t2 < -1.0 else t2
+    pitch_y = math.asin(t2)
+
+    t3 = +2.0 * (w * z + x * y)
+    t4 = +1.0 - 2.0 * (y * y + z * z)
+    yaw_z = math.atan2(t3, t4)
+
+    return roll_x, pitch_y, yaw_z # in radians
 
 def main(ONCE_base_dir, json_path):
     main_object = {}
@@ -170,6 +169,7 @@ def main(ONCE_base_dir, json_path):
 
     print(len(main_object['images']))
     json.dump(main_object, open(json_path, 'w'))
+
 
 if __name__ == '__main__':
     #kitti_obj_dir = '/data/kitti_obj'

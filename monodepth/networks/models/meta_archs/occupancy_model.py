@@ -1,6 +1,5 @@
 import torch
 from easydict import EasyDict
-from typing import Optional
 from vision_base.utils.builder import build
 from vision_base.networks.models.meta_archs.base_meta import BaseMetaArch
 
@@ -59,4 +58,3 @@ class OccupancyModel(BaseMetaArch):
             return self.forward_train(data, meta)
         else:
             return self.forward_test(data, meta)
-

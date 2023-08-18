@@ -41,7 +41,7 @@ def transform_points(points, T):
 
 
 class OccupancyHead(nn.Module):
-    def __init__(self, input_features, 
+    def __init__(self, input_features,
                  input_feature_lengths=120,
                  output_ch=4,
                 num_transformers=3, pts_batches=64,
@@ -76,7 +76,7 @@ class OccupancyHead(nn.Module):
         self.raw_noise_std = raw_noise_std
 
 
-        self.train_cfg = train_cfg        
+        self.train_cfg = train_cfg
 
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -165,7 +165,7 @@ class OccupancyHead(nn.Module):
         cam_pts_base = torch.matmul(inv_K, homo_random_pix) # [B, 2, 3, pts_batches]
 
         # dists : [B, 2, Z, pts_batches]
-        dists = torch.norm(cam_pts_base, dim=2, keepdim=True) * self.base_dist.reshape([1, 1, -1, 1]) 
+        dists = torch.norm(cam_pts_base, dim=2, keepdim=True) * self.base_dist.reshape([1, 1, -1, 1])
         
         # [B, 2, Z, 3, pts_batches]
         cam_pts  = cam_pts_base.unsqueeze(2) * self.render_z_range.reshape([1, 1, -1, 1, 1])
@@ -217,7 +217,7 @@ class OccupancyHead(nn.Module):
                 target_image = target_image.unsqueeze(1) # [B, 1, H, W]
             B, _, H, W = target_image.shape
             pix_x = random_pix_x[:, i:i+1, :] / W * 2 - 1 # [B, 1, pts_batches]
-            pix_y = random_pix_y[:, i:i+1, :] / H * 2 - 1 
+            pix_y = random_pix_y[:, i:i+1, :] / H * 2 - 1
             pix = torch.stack([pix_x, pix_y], dim=-1) # [B, 1, pts_batches, 2]
             target_pt = F.grid_sample(target_image.float(), pix, align_corners=True, padding_mode='zeros', mode='nearest') # [B, 3, 1, pts_batches]
             target_pts.append(target_pt.squeeze(2).permute(0, 2, 1)) # [B, pts_batches, 3]
@@ -233,14 +233,12 @@ class OccupancyHead(nn.Module):
 
     def get_teacher_voxel(self, teacher_depth_map, output_dict, P2):
         target_depth_clamp_to_bins = ((teacher_depth_map - self.z_range[0]) / self.z_range[2]).long() * self.z_range[2] + self.z_range[0]
-        depth_max_larger = target_depth_clamp_to_bins + self.z_range[0]
 
         depth_bins = torch.arange(self.z_range[0], self.z_range[1], self.z_range[2])
         self.depth_bins = depth_bins.cuda()
 
         reshaped_depth_bins = self.depth_bins.reshape(1, -1, 1, 1) # [1, Z, 1, 1]
         hit_index = torch.isclose(reshaped_depth_bins, target_depth_clamp_to_bins) # [B, Z, H, W]
-        larger_than_max  = (reshaped_depth_bins > depth_max_larger) # [B, Z, H, W]
 
         B, Z, H, W = 1, len(depth_bins), 192, 640
         target_logits = torch.zeros([B, Z, H, W]).cuda() # [B, Z, H, W]
@@ -248,16 +246,16 @@ class OccupancyHead(nn.Module):
 
         image_coordinates = project_on_image(
             self.get_coordinates().unsqueeze(0), P2) # [B, X, Y, Z, 3]
-        X_index = image_coordinates[..., 0] 
-        Y_index = image_coordinates[..., 1] 
+        X_index = image_coordinates[..., 0]
+        Y_index = image_coordinates[..., 1]
         Z_index = (image_coordinates[..., 2] - self.z_range[0]) / self.z_range[2] # [B, X, Y, Z]
         normed_x_index = X_index / W * 2 - 1 #[B, X, Y, Z]
         normed_y_index = Y_index / H * 2 - 1
         normed_z_index = Z_index / Z * 2 - 1
-        _, X3d, Y3d, Z3d = normed_x_index.shape 
+        _, X3d, Y3d, Z3d = normed_x_index.shape
         occupancy = F.grid_sample(
             target_logits.unsqueeze(1), #[B, 1, Z, H, W]
-              torch.stack([normed_x_index, normed_y_index, normed_z_index], dim=-1), #[B, X, Y, Z, 3]
+            torch.stack([normed_x_index, normed_y_index, normed_z_index], dim=-1), #[B, X, Y, Z, 3]
         ) # [B, 1, X, Y, Z]
 
         coordinates = torch.stack(torch.meshgrid(
@@ -279,7 +277,7 @@ class OccupancyHead(nn.Module):
         x = i.reshape(1, 1, -1).repeat(B, len(train_idxs), 1)  # [B, 2, H*W]
         y = j.reshape(1, 1, -1).repeat(B, len(train_idxs), 1)  # [B, 2, H*W]
         with torch.no_grad():
-            input_dict[('relative_pose', 0)] = torch.eye(4, device=base_img.device).unsqueeze(0).repeat(B, 1, 1) # 
+            input_dict[('relative_pose', 0)] = torch.eye(4, device=base_img.device).unsqueeze(0).repeat(B, 1, 1) #
             rendered = self.render(x, y, output_dict, input_dict, train_idxs) # [B, 2, H*W, 3]
         results = dict()
         for i, idx in enumerate(train_idxs):
@@ -340,7 +338,7 @@ class OccupancyHead(nn.Module):
 
         x = torch.randint(0, W-1, (B, len(frame_idxs), self.pts_batches), device=base_img.device).float()
         y = torch.randint(0, H-1, (B, len(frame_idxs), self.pts_batches), device=base_img.device).float()
-        input_dict[('relative_pose', 0)] = torch.eye(4, device=base_img.device).unsqueeze(0).repeat(B, 1, 1) # 
+        input_dict[('relative_pose', 0)] = torch.eye(4, device=base_img.device).unsqueeze(0).repeat(B, 1, 1) #
         
         render_dict = self.render(x, y, output_dict, input_dict, frame_idxs)
         depths = self.extract_target(x, y, output_dict, frame_idxs,
@@ -365,7 +363,6 @@ class OccupancyHead(nn.Module):
         loss_dict[f'depth_loss'] = depth_loss.detach()
 
         ## Depth Prediction
-        seg_losses = []
         seg = render_dict['seg_map'].permute(0, 3, 1, 2) #[B, idxs, N, C] -> [B, C, idxs, N]
         seg_loss = F.cross_entropy(seg, segs[..., 0], ignore_index=0).mean()
         loss_dict[f'seg_loss'] = seg_loss.detach()
@@ -491,16 +488,16 @@ class PVSplatHead(OccupancyHead):
                 outputs[('depth', i, i)] = self._gather_activation(output_logits) * depth_scale # [B, 1, H, W]
         
         B, Z, H, W = outputs[('logits', 0)].shape
-        ## 
+        ##
         image_coordinates = project_on_image(
             self.get_coordinates().unsqueeze(0), P2) # [B, X, Y, Z, 3]
-        X_index = image_coordinates[..., 0] 
-        Y_index = image_coordinates[..., 1] 
+        X_index = image_coordinates[..., 0]
+        Y_index = image_coordinates[..., 1]
         Z_index = (image_coordinates[..., 2] - self.z_range[0]) / self.z_range[2] # [B, X, Y, Z]
         normed_x_index = X_index / W * 2 - 1 #[B, X, Y, Z]
         normed_y_index = Y_index / H * 2 - 1
         normed_z_index = Z_index / Z * 2 - 1
-        _, X3d, Y3d, Z3d = normed_x_index.shape 
+        _, X3d, Y3d, Z3d = normed_x_index.shape
         rgb_base  = inputs[('original_image', 0)] # [B, 3, H, W]
         RGB = F.grid_sample(
             rgb_base,
@@ -509,9 +506,8 @@ class PVSplatHead(OccupancyHead):
 
         occupancy = F.grid_sample(
             outputs[('logits', 0)].unsqueeze(1), #[B, 1, Z, H, W]
-              torch.stack([normed_x_index, normed_y_index, normed_z_index], dim=-1), #[B, X, Y, Z, 3]
+            torch.stack([normed_x_index, normed_y_index, normed_z_index], dim=-1), #[B, X, Y, Z, 3]
         ) # [B, 1, X, Y, Z]
-        state = torch.cat([RGB, occupancy], dim=1) # [B, 4, X, Y, Z]
         # RGB = RGB + self.processing(state)
         outputs['output_voxel'] = torch.cat([RGB, occupancy], dim=1)
         return outputs
@@ -528,4 +524,3 @@ class PVSplatHead(OccupancyHead):
         voxel = output_dict['output_voxel'] # [B, 4, X, Y, Z]
         extracted_output = F.grid_sample(voxel, grid_3d_normed, align_corners=True, padding_mode='zeros') # [B, 4, 2, Z, pts_batches]
         return extracted_output
-

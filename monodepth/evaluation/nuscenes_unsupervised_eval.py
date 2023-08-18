@@ -6,6 +6,7 @@ import tqdm
 from functools import reduce
 from collections import Counter
 from pyquaternion import Quaternion
+from typing import Optional
 from torch.utils.tensorboard import SummaryWriter
 from nuscenes.utils.data_classes import LidarPointCloud
 from nuscenes.utils.geometry_utils import transform_matrix
@@ -254,7 +255,7 @@ class NuscenesEvaluator(KittiEigenEvaluator):
         gt_depth = read_depth(filename.replace('samples', self.gt_saved_dir).replace('.jpg', '.png'))
         return self._single_loss(depth_0, gt_depth)
     
-    def __call__(self, result_path, writer:SummaryWriter=None, global_step=0, epoch_num=0):
+    def __call__(self, result_path, writer:Optional[SummaryWriter]=None, global_step=0, epoch_num=0):
 
         all_mean_errors = []
         all_mean_errors_abs = []

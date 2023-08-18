@@ -2,7 +2,6 @@ from typing import List, Tuple, Union
 import numpy as np
 import cv2
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 def compute_res_loss(output, target):
     return F.smooth_l1_loss(output, target, reduction='elementwise_mean')
@@ -154,7 +153,7 @@ def decode_depth_inv_sigmoid(depth:torch.Tensor)->torch.Tensor:
 
     Returns:
         torch.Tensor: 3D depth for output
-    """    
+    """
     depth_decoded = torch.exp(-depth) #1 / torch.sigmoid(depth) - 1
     return depth_decoded
 
@@ -183,7 +182,7 @@ def decode_depth_inv_sigmoid_calibration(depth:torch.Tensor, fx:torch.Tensor, co
 
     Returns:
         torch.Tensor: 3D depth for output
-    """    
+    """
     inv_sigmoid = decode_depth_inv_sigmoid(depth)
     depth_decoded = fx / (inv_sigmoid * constant_scale)
     return depth_decoded
@@ -293,7 +292,7 @@ def _topk_channel(scores, K=40):
     return topk_scores, topk_inds, topk_ys, topk_xs
 
 def draw_bev_mask(mask, x, z, x_bounds, z_bounds, w, l, theta, cls):
-    bev_corners_x = [x + l / 2 * np.cos(theta) - w / 2 * np.sin(theta), 
+    bev_corners_x = [x + l / 2 * np.cos(theta) - w / 2 * np.sin(theta),
                      x + l / 2 * np.cos(theta) + w / 2 * np.sin(theta),
                      x - l / 2 * np.cos(theta) + w / 2 * np.sin(theta),
                      x - l / 2 * np.cos(theta) - w / 2 * np.sin(theta),
@@ -311,90 +310,6 @@ def draw_bev_mask(mask, x, z, x_bounds, z_bounds, w, l, theta, cls):
     cv2.fillPoly(mask, pts=[bev_points], color=cls)
     return mask
 
-class Position_loss(nn.Module):
-    def __init__(self, output_w):
-        super(Position_loss, self).__init__()
-
-        const = torch.Tensor(
-            [[-1, 0], [0, -1], [-1, 0], [0, -1], [-1, 0], [0, -1], [-1, 0], [0, -1], [-1, 0], [0, -1], [-1, 0], [0, -1],
-             [-1, 0], [0, -1], [-1, 0], [0, -1]]) #, [-1, 0], [0, -1]])
-        self.register_buffer('const', const.unsqueeze(0).unsqueeze(0)) # b,c,2
-        self.output_w = output_w
-
-        self.num_joints = 9
-
-    def forward(self, output, batch, calib):
-        dim = _transpose_and_gather_feat(output['dim'], batch['ind'])
-        rot = _transpose_and_gather_feat(output['rot'], batch['ind'])
-        prob = _transpose_and_gather_feat(output['prob'], batch['ind'])
-        kps = _transpose_and_gather_feat(output['hps'], batch['ind'])
-        rot=rot.detach()### solving............
-        
-        b = dim.size(0)
-        c = dim.size(1)
-
-        mask = batch['hps_mask']
-        mask = mask.float()
-        
-        cys = (batch['ind'] / self.output_w).int().float()
-        cxs = (batch['ind'] % self.output_w).int().float()
-        kps[..., ::2] = kps[..., ::2] + cxs.view(b, c, 1).expand(b, c, self.num_joints)
-        kps[..., 1::2] = kps[..., 1::2] + cys.view(b, c, 1).expand(b, c, self.num_joints)
-
-        meta = dict(calib=calib)
-        const = torch.Tensor(
-                [[-1, 0], [0, -1], [-1, 0], [0, -1], [-1, 0], [0, -1], [-1, 0], [0, -1], [-1, 0], [0, -1], [-1, 0], [0, -1],
-                [-1, 0], [0, -1], [-1, 0], [0, -1]]).unsqueeze(0).unsqueeze(0).cuda()
-        pinv,rot_y,alpha_pre, _ = gen_position(kps.reshape(b, kps.shape[1], 9, 2) * 4, dim, rot, meta, const)
-
-
-        kps_mask = mask
-
-        mask2 = torch.sum(kps_mask, dim=2)
-        loss_mask = mask2 > 15
-        
-
-        pinv = pinv.view(b, c, 3, 1).squeeze(3)
-
-        dim_mask = dim<0
-        dim = torch.clamp(dim, 0 , 10)
-        dim_mask_score_mask = torch.sum(dim_mask, dim=2)
-        dim_mask_score_mask = 1 - (dim_mask_score_mask > 0).int()
-        dim_mask_score_mask = dim_mask_score_mask.float()
-        
-        
-        box_pred = torch.cat((pinv, dim, rot_y), dim=2).detach()
-        loss = (pinv - batch['location'])
-        loss_norm = torch.norm(loss, p=2, dim=2)
-        loss_mask = loss_mask.float()
-        loss = loss_norm * loss_mask
-        mask_num = (loss_mask != 0).sum()
-        
-        loss = loss.sum() / (mask_num + 1)
-        dim_gt = batch['dim'].clone()  # b,c,3
-        location_gt = batch['location']
-        ori_gt = batch['ori']
-        dim_gt[dim_mask] = 0
-        
-        
-
-        gt_box = torch.cat((location_gt, dim_gt, ori_gt), dim=2)
-        box_pred = box_pred.view(b * c, -1)
-        gt_box = gt_box.view(b * c, -1)
-
-        box_score = boxes_iou3d_gpu(box_pred, gt_box)
-        box_score = torch.diag(box_score).view(b, c)
-        prob = prob.squeeze(2)
-        box_score = box_score * loss_mask * dim_mask_score_mask
-        loss_prob = F.binary_cross_entropy_with_logits(prob, box_score.detach(), reduce=False)
-        loss_prob = loss_prob * loss_mask * dim_mask_score_mask
-        loss_prob = torch.sum(loss_prob, dim=1)
-        loss_prob = loss_prob.sum() / (mask_num + 1)
-        box_score = box_score * loss_mask
-
-        box_score = box_score.sum() / (mask_num + 1e-3)
-        return loss, loss_prob, box_score
-    
 def gen_position(kps,dim,rot,meta,const):
     """ Decode rotation and generate position. Notice that
     unlike the official implementation, we do not transform back to pre-augmentation images.
@@ -404,7 +319,7 @@ def gen_position(kps,dim,rot,meta,const):
     therefore the way we construct least-square matrix also changed.
 
     Args:
-        kps [torch.Tensor]: [B, C, 9, 2], keypoints relative offset from the center_int in augmented scale 4. network prediction. 
+        kps [torch.Tensor]: [B, C, 9, 2], keypoints relative offset from the center_int in augmented scale 4. network prediction.
         dim [torch.Tensor]: [B, C, 3], width/height/length, the order is different.
         rot [torch.Tensor]: [B, C, 8], rotation prediction from the network.
         meta [Dict]: meta['calib'].shape = [B, 3, 4] -> calibration matrix for augmented images.
@@ -520,7 +435,7 @@ def gen_position_direct_alpha(kps,dim,rot,meta):
     therefore the way we construct least-square matrix also changed.
 
     Args:
-        kps [torch.Tensor]: [B, C, 9, 2], keypoints relative offset from the center_int in augmented scale 4. network prediction. 
+        kps [torch.Tensor]: [B, C, 9, 2], keypoints relative offset from the center_int in augmented scale 4. network prediction.
         dim [torch.Tensor]: [B, C, 3], width/height/length, the order is different.
         rot [torch.Tensor]: [B, C, 1], rotation prediction / alpha from the network.
         meta [Dict]: meta['calib'].shape = [B, 3, 4] -> calibration matrix for augmented images.
@@ -657,7 +572,7 @@ def stereo_optimized_position(l_kps, r_kps, P2, P3, dim, rot):
     l_cxy = l_cxy.repeat(1, 1, 8)  # b,c,16
     l_kp_norm = (l_kpoint[:] - l_cxy) / f
 
-    # form right kp_norm 
+    # form right kp_norm
     r_kpoint = r_kps[:, :, :16] #[B, C, 16]
     r_cx, r_cy = r_calib[:, :, 0, 2].unsqueeze(2), r_calib[:, :, 1, 2].unsqueeze(2)
     r_cxy = torch.cat((r_cx, r_cy), dim=2)

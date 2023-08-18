@@ -122,3 +122,4 @@ workdirs
 *.ipynb
 *.onnx
 *.avi
+*_object.json

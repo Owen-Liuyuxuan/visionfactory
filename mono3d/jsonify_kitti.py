@@ -1,5 +1,5 @@
 """
-The core idea is to produce a unified json data description file for KITTI and nuScenes dataset. 
+The core idea is to produce a unified json data description file for KITTI and nuScenes dataset.
 
 1. Unify classes annotations. We know there are categories in nuScenes not labeled in KITTI. We need to know that whether we are labeling each category in each image. If a category is not labeled in this image, we should not supress the prediction/evaluation of this category during training.
 2. We need to unify the coordination, rotation.
@@ -7,13 +7,12 @@ The core idea is to produce a unified json data description file for KITTI and n
 4. We allow images with 2D labels.
 5. Suggested data augmentation methods in training: RandomWarpAffine.
 
-Suggested unified Types: 
+Suggested unified Types:
 
 ['car', 'truck', 'bus', 'trailer', 'construction_vehicle', 'pedestrian', 'motorcycle', 'bicycle', 'traffic_cone', 'barrier']
 
 in KITTI, we mainly have this mapping dictionary {'Car': 'car', 'Pedestrian': 'pedestrian', 'Van': 'truck', 'Truck': 'truck', 'Cyclist': 'bicycle', 'Tram': 'bus'}. We preserve all other informations, visibility we will preserve occluded
 """
-import numpy as np
 import os
 import json
 from PIL import Image
@@ -103,6 +102,7 @@ def main(kitti_obj_dir, json_path):
         main_object['total_frames'] += 1
     
     json.dump(main_object, open(json_path, 'w'))
+
 
 if __name__ == '__main__':
     #kitti_obj_dir = '/data/kitti_obj'

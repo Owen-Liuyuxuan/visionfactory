@@ -1,6 +1,3 @@
-from typing import Dict
-import numpy as np
-import torch
 import torch.nn as nn
 from vision_base.networks.models.meta_archs.base_meta import BaseMetaArch
 from vision_base.utils.builder import build

@@ -66,7 +66,7 @@ class KITTI360BEVEvaluator(BaseEvaluator):
     def step(self, index, output_dict, data):
         image_id = self.images[index]['id']
         pred_path = os.path.join(self.result_path, f'{image_id}.png')
-        seg_result = output_dict['pred_seg'][0].cpu().numpy().astype(np.uint16) 
+        seg_result = output_dict['pred_seg'][0].cpu().numpy().astype(np.uint16)
         cv2.imwrite(pred_path, seg_result)
         self.pred_lists.append(pred_path)
 

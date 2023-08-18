@@ -1,5 +1,5 @@
 """
-The core idea is to produce a unified json data description file for Cityscape dataset. 
+The core idea is to produce a unified json data description file for Cityscape dataset.
 
 1. Unify classes annotations. We know there are categories in nuScenes not labeled in KITTI/cityscape. We need to know that whether we are labeling each category in each image. If a category is not labeled in this image, we should not supress the prediction/evaluation of this category during training.
 2. We need to unify the coordination, rotation.
@@ -8,17 +8,14 @@ The core idea is to produce a unified json data description file for Cityscape d
 5. Suggested data augmentation methods in training: RandomWarpAffine.
 6. In cityscape, we suggest only use the 2D label.
 
-Suggested unified Types: 
+Suggested unified Types:
 
 ['car', 'truck', 'bus', 'trailer', 'construction_vehicle', 'pedestrian', 'motorcycle', 'bicycle', 'traffic_cone', 'barrier']
 
 in KITTI, we mainly have this mapping dictionary {'Car': 'car', 'Pedestrian': 'pedestrian', 'Van': 'truck', 'Truck': 'truck', 'Cyclist': 'bicycle', 'Tram': 'bus'}. We preserve all other informations, visibility we will preserve occluded
 """
-import numpy as np
 import os
 import json
-from PIL import Image
-import tqdm
 
 LABELED_OBJECTS = ['car', 'pedestrian', 'truck', 'bicycle', 'bus', 'motorcycle', 'trailer', 'pedestrian']
 
@@ -73,7 +70,7 @@ def main(cityscape_base_path, json_path):
             label = obj['label']
             if label in LABELED_OBJECTS:
                 obj_dict=dict(
-                    image_id = index, 
+                    image_id = index,
                     bbox2d = obj['2d']['amodal'],
                     visibility_level=obj['occlusion'],
                     category_name=label
@@ -90,6 +87,7 @@ def main(cityscape_base_path, json_path):
         main_object['annotations'].append(annotations)
     
     json.dump(main_object, open(json_path, 'w'))
+
 
 if __name__ == '__main__':
     kitti_obj_dir = '/data/cityscapes'

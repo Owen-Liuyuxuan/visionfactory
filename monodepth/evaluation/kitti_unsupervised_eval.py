@@ -3,6 +3,7 @@ import os
 import cv2
 from PIL import Image
 import tqdm
+from typing import Optional
 from torch.utils.tensorboard import SummaryWriter
 from monodepth.networks.utils.monodepth_utils import generate_depth_map, compute_errors, project_depth_map
 from monodepth.data.datasets.utils import read_depth, read_pc_from_bin, read_csv
@@ -97,7 +98,7 @@ class KittiEigenEvaluator(object):
             print(log_str)
     
 
-    def __call__(self, result_path, writer:SummaryWriter=None, global_step=0, epoch_num=0):
+    def __call__(self, result_path, writer:Optional[SummaryWriter]=None, global_step=0, epoch_num=0):
         filelist = os.listdir(result_path)
         filelist.sort()
 

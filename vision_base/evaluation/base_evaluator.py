@@ -1,3 +1,4 @@
+from typing import Optional
 from torch.utils.tensorboard import SummaryWriter
 
 class BaseEvaluator(object):
@@ -18,5 +19,5 @@ class BaseEvaluator(object):
     def log(self, writer, mean_errors, mean_abs_errors, global_step=0, epoch_num=0, is_print=True):
         pass
 
-    def __call__(self, result_path, writer:SummaryWriter=None, global_step=0, epoch_num=0):
+    def __call__(self, result_path, writer:Optional[SummaryWriter]=None, global_step=0, epoch_num=0):
         pass

@@ -78,7 +78,7 @@ class MonoDepthWPose(BaseMetaArch):
         self.test_cfg = test_cfg
 
         self.is_use_res_pose = pose_backbone_cfg is not None
-        if self.is_use_res_pose:
+        if pose_backbone_cfg is not None:
             self.pose_backbone = build(**pose_backbone_cfg)
 
     

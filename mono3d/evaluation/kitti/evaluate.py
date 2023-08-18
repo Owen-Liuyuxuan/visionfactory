@@ -1,6 +1,5 @@
-import time
 from .kitti_common import get_label_annos
-from .eval import get_official_eval_result, get_coco_eval_result
+from .eval import get_official_eval_result
 from numba import cuda
 
 def _read_imageset_file(path):

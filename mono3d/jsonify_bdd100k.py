@@ -1,5 +1,5 @@
 """
-The core idea is to produce a unified json data description file for bdd100k dataset. 
+The core idea is to produce a unified json data description file for bdd100k dataset.
 
 1. Unify classes annotations. We know there are categories in nuScenes not labeled in KITTI/cityscape. We need to know that whether we are labeling each category in each image. If a category is not labeled in this image, we should not supress the prediction/evaluation of this category during training.
 2. We need to unify the coordination, rotation.
@@ -8,16 +8,14 @@ The core idea is to produce a unified json data description file for bdd100k dat
 5. Suggested data augmentation methods in training: RandomWarpAffine.
 6. In BDD100k, there are only 2D labels and .
 
-Suggested unified Types: 
+Suggested unified Types:
 
 ['car', 'truck', 'bus', 'trailer', 'construction_vehicle', 'pedestrian', 'motorcycle', 'bicycle', 'traffic_cone', 'barrier']
 
 in KITTI, we mainly have this mapping dictionary {'Car': 'car', 'Pedestrian': 'pedestrian', 'Van': 'truck', 'Truck': 'truck', 'Cyclist': 'bicycle', 'Tram': 'bus'}. We preserve all other informations, visibility we will preserve occluded
 """
-import numpy as np
 import os
 import json
-from PIL import Image
 import tqdm
 
 LABELED_OBJECTS = ['car', 'pedestrian', 'truck', 'bicycle', 'bus', 'motorcycle', 'trailer']
@@ -53,7 +51,7 @@ def main(bdd100k_base_path, json_path):
                 P = [640, 0, 640, 0,
                     0,  640, 340, 0,
                     0, 0, 1, 0]
-            ) # we have to use a fake calibration file here because BDD100k have no calibration data 
+            ) # we have to use a fake calibration file here because BDD100k have no calibration data
         )
         annotations = []
         frame = bdd_annotation_data[index]
@@ -75,6 +73,7 @@ def main(bdd100k_base_path, json_path):
         main_object['annotations'].append(annotations)
 
     json.dump(main_object, open(json_path, 'w'))
+
 
 if __name__ == '__main__':
     bdd100k_base_path = '/data/bdd100k/'

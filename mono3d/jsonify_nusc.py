@@ -1,5 +1,5 @@
 """
-The core idea is to produce a unified json data description file for KITTI and nuScenes dataset. 
+The core idea is to produce a unified json data description file for KITTI and nuScenes dataset.
 
 1. Unify classes annotations. We know there are categories in nuScenes not labeled in KITTI. We need to know that whether we are labeling each category in each image. If a category is not labeled in this image, we should not supress the prediction/evaluation of this category during training.
 2. We need to unify the coordination, rotation.
@@ -7,7 +7,7 @@ The core idea is to produce a unified json data description file for KITTI and n
 4. We allow images with 2D labels.
 5. Suggested data augmentation methods in training: RandomWarpAffine.
 
-Suggested unified Types: 
+Suggested unified Types:
 
 ['car', 'truck', 'bus', 'trailer', 'construction_vehicle', 'pedestrian', 'motorcycle', 'bicycle', 'traffic_cone', 'barrier']
 
@@ -16,13 +16,11 @@ in KITTI, we mainly have this mapping dictionary {'Car': 'car', 'Pedestrian': 'p
 import numpy as np
 import os
 import json
-from PIL import Image
 import tqdm
 from typing import List
 from pyquaternion import Quaternion
 
 from nuscenes.eval.detection.utils import category_to_detection_name
-from nuscenes.utils.data_classes import LidarPointCloud, Box
 from nuscenes.utils.geometry_utils import BoxVisibility, transform_matrix
 from nuscenes.utils.kitti import KittiDB
 from nuscenes.utils.splits import create_splits_logs
@@ -58,7 +56,7 @@ def main(dataroot, json_path, version='v1.0-trainval'):
     nusc = NuScenes(dataroot, version)
 
     kitti_to_nu_lidar = Quaternion(axis=(0, 0, 1), angle=np.pi / 2)
-    kitti_to_nu_lidar_inv = kitti_to_nu_lidar.inverse
+    kitti_to_nu_lidar_inv = kitti_to_nu_lidar.inverse # noqa: F841
 
     main_object = {}
     main_object['labeled_objects'] = LABELED_OBJECTS
@@ -86,7 +84,7 @@ def main(dataroot, json_path, version='v1.0-trainval'):
         cs_record_cams = [nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token']) for sd_record in sd_record_cams]
         cs_record_lid = nusc.get('calibrated_sensor', sd_record_lid['calibrated_sensor_token'])
 
-        # transforms 
+        # transforms
         lid_to_ego = transform_matrix(cs_record_lid['translation'], Quaternion(cs_record_lid['rotation']),
                                           inverse=False)
         ego_to_cams = [transform_matrix(cs_record_cam['translation'], Quaternion(cs_record_cam['rotation']),
@@ -166,6 +164,7 @@ def main(dataroot, json_path, version='v1.0-trainval'):
     
     
     json.dump(main_object, open(json_path, 'w'))
+
 
 if __name__ == '__main__':
     kitti_obj_dir = '/data/nuscene'

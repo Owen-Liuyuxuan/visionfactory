@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from easydict import EasyDict
-from typing import Optional
+from typing import Optional, List, Dict
 import torch
 import torch.nn as nn
 from torch.utils.data.dataset import Dataset # noqa: F401
@@ -23,10 +23,10 @@ class KittiEvaluationHook(BaseEvaluationHook):
     """
     def __init__(self,
                 test_run_hook_cfg:EasyDict,
-                dataset_eval_cfg:Optional[EasyDict]=None, #dataset specific
+                dataset_eval_cfg:EasyDict, #dataset specific
                 **kwargs):
         self.test_hook:BaseValidationHook = build(**test_run_hook_cfg)
-        self.dataset_eval_func = None if dataset_eval_cfg is None else build(**dataset_eval_cfg)
+        self.dataset_eval_func = build(**dataset_eval_cfg)
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -44,8 +44,8 @@ class KittiEvaluationHook(BaseEvaluationHook):
         dataloader = DataLoader(dataset_val, batch_size, shuffle=False, num_workers=num_workers,
                             collate_fn=collate_fn)
 
-        errors = []
-        abs_errors = []
+        errors:List[float]= []
+        abs_errors:List[float] = []
         frame_index = 0
         for batched_data in tqdm(dataloader):
             output_dict = self.test_hook(batched_data, meta_arch, global_step, epoch_num)
@@ -141,10 +141,10 @@ class KittiEvaluationHook_postopt(KittiEvaluationHook):
 class FastNuscEvaluationHook(BaseEvaluationHook):
     def __init__(self,
                 test_run_hook_cfg:EasyDict,
-                dataset_eval_cfg:Optional[EasyDict]=None, #dataset specific
+                dataset_eval_cfg:EasyDict, #dataset specific
                 **kwargs):
         self.test_hook:BaseValidationHook = build(**test_run_hook_cfg)
-        self.dataset_eval_func = None if dataset_eval_cfg is None else build(**dataset_eval_cfg)
+        self.dataset_eval_func = build(**dataset_eval_cfg)
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -162,8 +162,8 @@ class FastNuscEvaluationHook(BaseEvaluationHook):
         dataloader = DataLoader(dataset_val, batch_size, shuffle=False, num_workers=num_workers,
                             collate_fn=collate_fn)
 
-        errors = dict()
-        abs_errors = dict()
+        errors:Dict[str, List] = dict()
+        abs_errors:Dict[str, List] = dict()
         for batched_data in tqdm(dataloader):
             output_dict = self.test_hook(batched_data, meta_arch, global_step, epoch_num)
             B = output_dict['depth'].shape[0]
@@ -194,12 +194,14 @@ class FastNuscEvaluationHook(BaseEvaluationHook):
         for cam in errors:
             mean_errors = np.array(errors[cam]).mean(0)
             mean_abs_errors = np.array(abs_errors[cam]).mean(0)
-            self.dataset_eval_func.log(writer, cam, mean_errors, mean_abs_errors, global_step=global_step, epoch_num=epoch_num)
+            if self.dataset_eval_func is not None:
+                self.dataset_eval_func.log(writer, cam, mean_errors, mean_abs_errors, global_step=global_step, epoch_num=epoch_num)
             all_mean_errors.append(mean_errors)
             all_mean_errors_abs.append(mean_abs_errors)
         all_mean_errors = np.array(all_mean_errors).mean(0)
         all_mean_errors_abs = np.array(all_mean_errors_abs).mean(0)
-        self.dataset_eval_func.log(writer, 'all mean', all_mean_errors, all_mean_errors_abs, global_step=global_step, epoch_num=epoch_num)
+        if self.dataset_eval_func is not None:
+            self.dataset_eval_func.log(writer, 'all mean', all_mean_errors, all_mean_errors_abs, global_step=global_step, epoch_num=epoch_num)
 
 class PostOptFastNuscEvaluationHook(FastNuscEvaluationHook):
     def _init_post_opt(self):
@@ -234,8 +236,8 @@ class PostOptFastNuscEvaluationHook(FastNuscEvaluationHook):
         dataloader = DataLoader(dataset_val, batch_size, shuffle=False, num_workers=num_workers,
                             collate_fn=collate_fn)
 
-        errors = dict()
-        abs_errors = dict()
+        errors:Dict[str, List] = dict()
+        abs_errors:Dict[str, List] = dict()
         for batched_data in tqdm(dataloader):
             output_dict = self.test_hook(batched_data, meta_arch, global_step, epoch_num)
             B = output_dict['depth'].shape[0]

@@ -11,7 +11,7 @@ from numba import jit
     1. The pinhole projection on middle numbers, a = x/z and b = y/z, r^2 = a^2 + b^2, \theta = atan(r).
     1.5 Distortion, \theta = \theta * (1 + k1 * \theta^2 + k2 * \theta^4 + k3 * \theta^6 + k4 * \theta^8)  (ignored)
     2. The distorted point coordinate are x' = (\theta / r) * a , y' = (\theta / r) * b.
-    3. The final image coordinate are x = x' * f + cx, y = y' * f + cy. 
+    3. The final image coordinate are x = x' * f + cx, y = y' * f + cy.
 """
 
 def _cam2image(points, P, calib):
@@ -58,7 +58,7 @@ def _cam2image(points, P, calib):
     1. retrieve points from the image plane to the normalized plane: x' = (x - u0) / gamma1; y' = (y - v0) / gamma2
     2. compute \theta = sqrt(x' * x' + y' * y'), r = tan(\theta)
     3. compute a = r * x' / \theta, b = r * y' / \theta
-    4. z = norm / (\sqrt(a*a + b*b + 1)), x = a * z, y = b * z
+    4. z = norm / (sqrt(a*a + b*b + 1)), x = a * z, y = b * z
 """
 
 @jit(nopython=True, cache=True)
@@ -104,14 +104,10 @@ class OpenCVFisheyeCameraProjection(object):
         return torch.stack([x, y, norm], dim=-1)
 
     def image2cam(self, norm, P, calib):
-        B, _ ,H, W = norm.shape
-        Xs = []
-        Ys = []
-        Zs = []
-        masks = []
+        _, _ ,H, W = norm.shape
         
         u0 = P[:, 0, 2] # [B]
-        v0 = P[:, 1, 2] 
+        v0 = P[:, 1, 2]
         gamma1 = P[:, 0, 0]
         gamma2 = P[:, 1, 1]
 
@@ -135,7 +131,7 @@ class OpenCVFisheyeCameraProjection(object):
             k1, k2, k3, k4 = dist['k1'], dist['k2'], dist['k3'], dist['k4']
             key = (H, W, gamma1[b].item(), gamma2[b].item(), u0[b].item(), v0[b].item(), k1, k2, k3, k4)
             if key in self.cache:
-               undist_theta[b:b+1] = torch.from_numpy(self.cache[key]).float().cuda()
+                undist_theta[b:b+1] = torch.from_numpy(self.cache[key]).float().cuda()
             else:
                 undist_theta[b:b+1] = torch.from_numpy(whole_map_undistort(H, W, theta[b:b+1].cpu().numpy(), k1, k2, k3, k4)).float().cuda()
                 self.cache[key] = undist_theta[b:b+1].cpu().numpy().copy()

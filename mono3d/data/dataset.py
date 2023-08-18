@@ -4,10 +4,10 @@ import torch
 import numpy as np
 from easydict import EasyDict
 import json
-from typing import List, Tuple, Dict
+from typing import List, Dict
 
 from copy import deepcopy
-from dgp.datasets.synchronized_dataset import SynchronizedScene, SynchronizedSceneDataset
+from dgp.datasets.synchronized_dataset import SynchronizedSceneDataset
 from vision_base.utils.builder import build
 from mono3d.model.utils import BBox3dProjector, theta2alpha_3d
 from mono3d.model.rtm3d_utils import gen_hm_radius, gaussian_radius
@@ -365,8 +365,8 @@ class Json2DDataset(JsonMonoDataset):
 
                 # Generate heatmaps for main center
                 """
-                In the case of 2D data, suppress all points outside of the 2D bounding boxes, 
-                Default all points to be negative points. Heatmaps with correct class inside the 2D bounding boxes set to be -1. 
+                In the case of 2D data, suppress all points outside of the 2D bounding boxes,
+                Default all points to be negative points. Heatmaps with correct class inside the 2D bounding boxes set to be -1.
                 """
                 gen_hm_radius(hm_main_center[cls_id], center, radius)
                 x_min, y_min, x_max, y_max = bbox.astype(np.int32)

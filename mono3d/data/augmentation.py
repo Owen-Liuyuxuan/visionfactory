@@ -157,7 +157,7 @@ class RandomMirror(object):
 
             for key in self.object_keys:
                 annotations = data[key]
-                image_shape_array = np.array([width, height, width, height])
+                image_shape_array = np.array([width, height, width, height]) # noqa: F841
                 for i in range(len(annotations)):
                     bbox_l = annotations[i]['bbox2d'][0]
                     bbox_r = annotations[i]['bbox2d'][2]

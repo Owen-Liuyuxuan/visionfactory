@@ -1,7 +1,6 @@
 import sys
 sys.path.append("/home/FSNet")
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 import os
@@ -10,8 +9,7 @@ import tqdm
 from vision_base.utils.builder import build
 from vision_base.data.datasets.dataset_utils import collate_fn
 from vision_base.utils.utils import cfg_from_file
-from segmentation_utils.utils import Colorizevoxel
-from monodepth.networks.models.heads.occupancy_head import project_on_image, build_inv_K
+from monodepth.networks.models.heads.occupancy_head import project_on_image
 
 print('CUDA available: {}'.format(torch.cuda.is_available()))
 
@@ -61,11 +59,9 @@ def get_teacher_voxel(teacher_depth_map, segmentation, z_range, pass_through_log
 
 def main():
     cfg = cfg_from_file("configs/occupancy.py")
-    is_test_train = True
 
     split_to_test='training'
     cfg.train_dataset.augmentation = cfg.val_dataset.augmentation
-    is_test_train = split_to_test == 'training'
     if split_to_test == 'training':
         dataset = build(**cfg.train_dataset)
     elif split_to_test == 'test':
@@ -96,7 +92,7 @@ def main():
         B, _, H, W = images[0].shape
         with torch.no_grad():
             depths = [teacher_net.compute_teacher_depth(collated_data[('image', idx)])[('teacher_depth', 0, 0)] for idx in cfg.data.frame_idxs]
-                # List of  [B, 1, H, W]
+            # List of  [B, 1, H, W]
         teacher_z_range = [2, 50, 0.2] #cfg.meta_arch.head_cfg.z_range, we could use a larger range of depth_bin to get more accurate occupancy
         teacher_depth_bins = torch.arange(teacher_z_range[0], teacher_z_range[1], teacher_z_range[2]) # [Z]
         teacher_Z = len(teacher_depth_bins)
@@ -111,7 +107,7 @@ def main():
         local_world_voxel = get_coordinates(x_range, y_range, z_range) # [X, Y, Z, 3]
         X, Y, Z, _ = local_world_voxel.shape
 
-        ## 
+        ##
         log_likelihood_occupancies = []
         num_classes=45
         segmentation_counts = torch.zeros([B, X, Y, Z, num_classes]).cuda()
@@ -121,7 +117,7 @@ def main():
             P_T = torch.matmul(P2, T_target2src)
             image_coordinates = project_on_image(local_world_voxel.unsqueeze(0), P_T) # [B, X, Y, Z, 3]
             X_index = image_coordinates[..., 0]
-            Y_index = image_coordinates[..., 1] 
+            Y_index = image_coordinates[..., 1]
             Z_index = (image_coordinates[..., 2] - teacher_z_range[0]) / teacher_z_range[2] # [B, X, Y, Z]
             normed_x_index = X_index / W * 2 - 1 #[B, X, Y, Z]
             normed_y_index = Y_index / H * 2 - 1
@@ -136,8 +132,8 @@ def main():
             voxel, segmentation_counter = get_teacher_voxel(depths[i], segmentation, teacher_z_range, hit_loglike=pos_weight, pass_through_loglike=neg_weight) # [B, Z, H, W]
             log_likelihood_occupancies.append(F.grid_sample(
                 voxel.unsqueeze(1), #[B, 1, Z, H, W]
-                    torch.stack([normed_x_index, normed_y_index, normed_z_index], dim=-1), #[B, X, Y, Z, 3]
-            )) # [B, 1, X, Y, Z] 
+                torch.stack([normed_x_index, normed_y_index, normed_z_index], dim=-1), #[B, X, Y, Z, 3]
+            )) # [B, 1, X, Y, Z]
             semantic_voxel = F.grid_sample(
                     segmentation_counter.unsqueeze(1).float(), #[B  Z, H, W]
                     torch.stack([normed_x_index, normed_y_index, normed_z_index], dim=-1), #[B, X, Y, Z, 3]
@@ -168,6 +164,7 @@ def main():
         np.savez_compressed(
             output_dir, occupancy=target_occupancies_array, mask=mask, semantics=segmentation_label[0].cpu().numpy()
         )
+
 
 if __name__ == "__main__":
     main()

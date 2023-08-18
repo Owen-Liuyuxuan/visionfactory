@@ -216,7 +216,7 @@ class KITTI360VoxelDataset(torch.utils.data.Dataset):
         data['sequence_name'] = sequence_name
         data['image_index'] = img_indexes[0]
 
-        voxel_path = os.path.join(self.voxel_path, 'data_voxel', 
+        voxel_path = os.path.join(self.voxel_path, 'data_voxel',
                                 sequence_name, 'image_00', f"{img_indexes[0]:010d}.npz")
         
         if os.path.isfile(voxel_path):

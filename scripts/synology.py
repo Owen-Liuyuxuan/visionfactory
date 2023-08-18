@@ -67,7 +67,7 @@ def main(config_path, experiment_name='default'):
     ea.Reload()
 
     text_result_tags = ea.Tags()['tensors']
-    evaluation_tags = [tag for tag in text_result_tags 
+    evaluation_tags = [tag for tag in text_result_tags
                 if 'evaluation' in tag.lower() or 'validation' in tag.lower() or 'test' in tag.lower()]
     if len(evaluation_tags) == 0:
         print("Not evaluated yet")

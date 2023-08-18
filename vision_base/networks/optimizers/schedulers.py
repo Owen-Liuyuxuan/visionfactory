@@ -63,7 +63,7 @@ class GradualWarmupScheduler(optim.lr_scheduler._LRScheduler):
                 self.after_scheduler.step(metrics, epoch - self.total_epoch)
 
     def step(self, epoch=None, metrics=None):
-        if type(self.after_scheduler) != optim.lr_scheduler.ReduceLROnPlateau:
+        if type(self.after_scheduler) is not optim.lr_scheduler.ReduceLROnPlateau:
             if self.finished and self.after_scheduler:
                 if epoch is None:
                     self.after_scheduler.step(None)
@@ -75,7 +75,7 @@ class GradualWarmupScheduler(optim.lr_scheduler._LRScheduler):
         else:
             self.step_ReduceLROnPlateau(metrics, epoch)
 
-def build_scheduler(optimizer, name=None, **kwargs)->optim.lr_scheduler._LRScheduler:
+def build_scheduler(optimizer, name=None, **kwargs)->optim.lr_scheduler.LRScheduler:
     if name is None:
         return optim.lr_scheduler.ExponentialLR(optimizer, 1.0)
     if name.lower() == 'StepLR'.lower():

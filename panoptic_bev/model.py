@@ -1,7 +1,6 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from vision_base.networks.models.meta_archs.base_meta import BaseMetaArch
 from vision_base.utils.builder import build
 from vision_base.networks.blocks.blocks import ConvBnReLU
@@ -21,8 +20,8 @@ class NaiveBEVMetaArch(BaseMetaArch):
             ConvBnReLU(512, 32),
             nn.Flatten(),
             nn.Linear(
-            (192 // 32) * (640 // 32) * 32,
-            (768 // 16) * (704 // 16) * 32),
+                (192 // 32) * (640 // 32) * 32,
+                (768 // 16) * (704 // 16) * 32),
         )
         self.upsample = nn.Sequential(
             ConvBnReLU(32, 16, (3, 3)),

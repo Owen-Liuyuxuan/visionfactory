@@ -31,7 +31,7 @@ class KITTI360Evaluator(BaseEvaluator):
     def step(self, index, output_dict, data):
         pred_path = os.path.join(self.result_path, 'pred_{:010d}.png'.format(index))
         h, w, _ = data['original_shape']
-        seg_result = output_dict['pred_seg'][0].cpu().numpy().astype(np.uint16) 
+        seg_result = output_dict['pred_seg'][0].cpu().numpy().astype(np.uint16)
         seg_result = cv2.resize(seg_result, (w, h), interpolation=cv2.INTER_NEAREST)
         cv2.imwrite(pred_path, seg_result)
         self.pred_lists.append(pred_path)

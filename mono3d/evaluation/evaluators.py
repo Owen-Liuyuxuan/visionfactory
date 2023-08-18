@@ -11,7 +11,7 @@ from vision_base.utils.builder import build
 
 class KittiObjEvaluateHook(BaseEvaluationHook):
     def __init__(self, test_run_hook_cfg,
-                 temp_file_dir, label_file_dir, label_split_file, 
+                 temp_file_dir, label_file_dir, label_split_file,
                  obj_mapping={'car': 'Car', 'pedestrian': 'Pedestrian', 'bicycle': 'Cyclist', 'truck': 'Truck'}, result_path_split='test'):
         self.test_hook = build(**test_run_hook_cfg)
         self.temp_file_dir = temp_file_dir
@@ -36,7 +36,7 @@ class KittiObjEvaluateHook(BaseEvaluationHook):
 
             output_dict = self.test_hook(collated_data, meta_arch, global_step, epoch_num)
 
-            self.result_writer.write(index, output_dict['scores'].cpu().numpy(), 
+            self.result_writer.write(index, output_dict['scores'].cpu().numpy(),
                                     output_dict['original_bboxes'][:, 0:4].cpu().numpy(), output_dict['cls_names'],
                                     output_dict['original_bboxes'][:, 4:].cpu().numpy())
 

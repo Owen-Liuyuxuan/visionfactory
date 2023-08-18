@@ -10,7 +10,6 @@ from scipy.optimize import linear_sum_assignment
 from mono3d.model.utils import ClipBoxes, calc_iou, alpha2theta_3d, BackProjection
 from mono3d.model.rtm3d_utils import _transpose_and_gather_feat,\
      compute_rot_loss, _nms, _topk, decode_depth_from_keypoints, decode_depth_inv_sigmoid_calibration
-from mono3d.model.rtm3d_utils import gaussian_radius, gen_hm_radius
 
 class IoULoss(nn.Module):
     """Some Information about IoULoss"""
@@ -148,12 +147,12 @@ class MonoFlexHead(nn.Module):
         loss = compute_rot_loss(pred, rotbin, rotres, mask)
         return loss
 
-    def _init_layers(self, 
+    def _init_layers(self,
                     input_features=256,
                     head_features=64,
                     head_dict=dict(),
                      **kwargs):
-        # self.head_dict = head_dict 
+        # self.head_dict = head_dict
         self.head_layers = nn.ModuleDict()
         for head_name, num_output in head_dict.items():
             self.head_layers[head_name] = nn.Sequential(
@@ -182,7 +181,7 @@ class MonoFlexHead(nn.Module):
                    uncertainty_weight=1.0,
                    loss_weight:dict=dict(),
                    **kwargs):
-        assert uncertainty_range[1] >= uncertainty_range[0]    
+        assert uncertainty_range[1] >= uncertainty_range[0]
         self.bbox2d_loss = IoULoss()
         self.uncertainty_range = uncertainty_range
         self.uncertainty_weight = uncertainty_weight
@@ -196,12 +195,12 @@ class MonoFlexHead(nn.Module):
     @torch.no_grad()
     def update_2d_pseudo_label(self, output, annotations):
         """
-        What we want, all pixels outside 2D bboxes be 0, selected maximum points to be 1. 
+        What we want, all pixels outside 2D bboxes be 0, selected maximum points to be 1.
         All points inside 2D bboxes to be -1.
 
         Seperate the task into two parts:
             All pixels to be 0 / All points inside 2D bboxes to be -1  : done in dataset.
-            select maximum point to be 1. 
+            select maximum point to be 1.
         """
         B = output['hm'].shape[0]
 
@@ -210,7 +209,7 @@ class MonoFlexHead(nn.Module):
                 continue
             ## Only consider frame instance without 3D labels
             hm = torch.sigmoid(output['hm'][i:i+1]) #[1, C, H, W]
-            hm_h, hm_w = hm.shape[2], hm.shape[3]
+            _, hm_w = hm.shape[2], hm.shape[3]
             heat = _nms(hm) #[1, C, H, W]
             K = 200
             scores, inds, clses, ys, xs = _topk(heat, K=K)
@@ -231,7 +230,7 @@ class MonoFlexHead(nn.Module):
 
             row_inds, col_inds = linear_sum_assignment(cost_matrix) # [K, ]
             keep_mask = col_inds < K #[max_object, ] numpy bool
-            row_inds = row_inds[keep_mask] #[m, ] 
+            row_inds = row_inds[keep_mask] #[m, ]
             col_inds = col_inds[keep_mask] #[m, ] usable indexes
             M = col_inds.shape[0]
 
@@ -247,13 +246,13 @@ class MonoFlexHead(nn.Module):
             center_ys = ys[0][col_inds]
             cls_indexes[0:M] = annotations['cls_indexes'][i][row_inds]
             ind[0:M] = center_ys * hm_w + center_xs
-            bboxes2d_target[0:M, 0] = center_xs - gt_bbox2ds[:, 0] 
-            bboxes2d_target[0:M, 1] = center_ys - gt_bbox2ds[:, 1] 
-            bboxes2d_target[0:M, 2] = gt_bbox2ds[:, 2] - center_xs 
+            bboxes2d_target[0:M, 0] = center_xs - gt_bbox2ds[:, 0]
+            bboxes2d_target[0:M, 1] = center_ys - gt_bbox2ds[:, 1]
+            bboxes2d_target[0:M, 2] = gt_bbox2ds[:, 2] - center_xs
             bboxes2d_target[0:M, 3] = gt_bbox2ds[:, 3] - center_ys
 
-            hs = (gt_bbox2ds[:, 3] - gt_bbox2ds[:, 1]).cpu().numpy()
-            ws = (gt_bbox2ds[:, 2] - gt_bbox2ds[:, 0]).cpu().numpy()
+            # hs = (gt_bbox2ds[:, 3] - gt_bbox2ds[:, 1]).cpu().numpy()
+            # ws = (gt_bbox2ds[:, 2] - gt_bbox2ds[:, 0]).cpu().numpy()
             for m in range(M):
                 cls_idx = cls_indexes[m].item()
                 target_hm[cls_idx][center_ys[m].long().item(), center_xs[m].long().item()] = 1
@@ -384,7 +383,7 @@ class MonoFlexHead(nn.Module):
         mask = scores > score_threshold#[K]
         bbox2d = bbox2d[mask]
         scores = scores[mask].unsqueeze(1) #[K, 1]
-        dims   = gathered_output['dim'][mask] #[w, h, l] ? 
+        dims   = gathered_output['dim'][mask] #[w, h, l] ?
         cls_indexes = clses[mask].long()
         alpha = self._decode_alpha(gathered_output['rot'][mask])
 
