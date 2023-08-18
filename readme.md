@@ -7,6 +7,6 @@ The general starting points/runtime backbone will be in the "scripts", common mo
 For different tasks, we may meed to overwrite parts of the dataloader / meta model / evaluator for different tasks. Checkout [visual3D], [segmentation], [monodepth] for more.
 
 
-[visual3Ds]:docs/mono3d/readme.md
+[visual3D]:docs/mono3d/readme.md
 [segmentation]:docs/segmentation/readme.md
 [monodepth]:docs/monodepth/readme.md
