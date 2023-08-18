@@ -1,0 +1,230 @@
+from easydict import EasyDict as edict
+import os
+import numpy as np
+from copy import deepcopy
+
+cfg = edict()
+obj_types= ['car', 'truck', 'bus', 'trailer', 'construction_vehicle', 'pedestrian', 'motorcycle', 'bicycle', 'traffic_cone', 'barrier']
+cfg.obj_types = obj_types
+## path
+def build_path():
+    path = edict()
+    path.base_path = "/home/yliuhb/vision_collection/src/learning/FSNet"
+    path.project_path = "/home/yliuhb/vision_collection/src/learning/FSNet/workdirs"
+    path.data3d_prior_path = "/home/yliuhb/vision_collection/model/det3d/mean_3d_prior.json"
+    if not os.path.isdir(path.project_path):
+        os.mkdir(path.project_path)
+    path.project_path = os.path.join(path.project_path, 'MonoFlex_3D2D')
+    if not os.path.isdir(path.project_path):
+        os.mkdir(path.project_path)
+
+    path.log_path = os.path.join(path.project_path, "log")
+    if not os.path.isdir(path.log_path):
+        os.mkdir(path.log_path)
+
+    path.checkpoint_path = os.path.join(path.project_path, "checkpoint")
+    if not os.path.isdir(path.checkpoint_path):
+        os.mkdir(path.checkpoint_path)
+
+    path.preprocessed_path = os.path.join(path.project_path, "output")
+    if not os.path.isdir(path.preprocessed_path):
+        os.mkdir(path.preprocessed_path)
+
+    path.train_imdb_path = os.path.join(path.preprocessed_path, "training")
+    if not os.path.isdir(path.train_imdb_path):
+        os.mkdir(path.train_imdb_path)
+
+    path.val_imdb_path = os.path.join(path.preprocessed_path, "validation")
+    if not os.path.isdir(path.val_imdb_path):
+        os.mkdir(path.val_imdb_path)
+    return path
+
+cfg.path = build_path()
+## trainer
+trainer = edict(
+    gpu = 0,
+    max_epochs = 100,
+    disp_iter = 100,
+    save_iter = 20,
+    test_iter = 100,
+    training_hook = edict(
+        name='vision_base.pipeline_hooks.train_val_hooks.base_training_hooks.BaseTrainingHook',
+        clip_gradients=35.0,
+    ),
+    evaluate_hook = edict(
+        name="mono3d.evaluation.evaluators.KittiObjEvaluateHook",
+        test_run_hook_cfg=edict(name='vision_base.pipeline_hooks.train_val_hooks.base_validation_hooks.BaseValidationHook'),
+        temp_file_dir=cfg.path.val_imdb_path,
+        label_file_dir=os.path.join("/data/kitti_obj/training/label_2"),
+        label_split_file="/data/kitti_obj/ImageSets/val.txt",
+        obj_mapping={'car': 'Car', 'pedestrian': 'Pedestrian', 'bicycle': 'Cyclist'}
+    )
+)
+cfg.trainer = trainer
+
+## optimizer
+optimizer = edict(
+    name = 'adam',
+    lr        = 1e-4,
+    weight_decay = 0,
+)
+cfg.optimizer = optimizer
+## scheduler
+scheduler = edict(
+    name = 'MultiStepLR',
+    milestones = [40, 60, 80]
+)
+cfg.scheduler = scheduler
+
+data = edict(
+    batch_size = 16,
+    num_workers = 4,
+    rgb_shape = (384, 1280, 3),
+    frame_idxs  = [0, 1, -1],
+)
+
+
+### Build Augmentation
+data.augmentation = edict(
+    rgb_mean = np.array([0.485, 0.456, 0.406]),
+    rgb_std  = np.array([0.229, 0.224, 0.225]),
+    cropSize = (data.rgb_shape[0], data.rgb_shape[1]),
+    key_mappings=edict(
+        image_keys=['image'],
+        calib_keys=['P'],
+        object_keys = ['objs_list']
+    )
+)
+augmentation_lib = 'vision_base.data.augmentations.augmentations'
+builder_lib = 'vision_base.utils.builder'
+warpaffine_augmentation = edict(
+    name=f'{builder_lib}.Sequential',
+    cfg_list = [
+        edict(name=f'{augmentation_lib}.ConvertToFloat'),
+        edict(name='mono3d.data.augmentation.RandomWarpAffine', output_w=data.augmentation.cropSize[1], output_h=data.augmentation.cropSize[0]),
+        edict(name=f'{builder_lib}.Shuffle', 
+              cfg_list=[
+                    edict(name=f'{augmentation_lib}.RandomBrightness', distort_prob=1.0),
+                    edict(name=f'{augmentation_lib}.RandomContrast', distort_prob=1.0, lower=0.6, upper=1.4),
+                    edict(name=f'{builder_lib}.Sequential',
+                        cfg_list=[
+                            edict(name=f'{augmentation_lib}.ConvertColor', transform='HSV'),
+                            edict(name=f'{augmentation_lib}.RandomSaturation', distort_prob=1.0, lower=0.6, upper=1.4),
+                            edict(name=f'{augmentation_lib}.ConvertColor', current='HSV', transform='RGB'),
+                        ] 
+                    )
+            ],
+        ),
+        edict(name=f'mono3d.data.augmentation.RandomMirror', mirror_prob=0.5),
+        edict(name=f'{augmentation_lib}.Normalize', mean=data.augmentation.rgb_mean, stds=data.augmentation.rgb_std),
+        edict(name=f'mono3d.data.augmentation.FilterObject'),
+        edict(name=f'{augmentation_lib}.ConvertToTensor'),
+        
+    ],
+    **data.augmentation.key_mappings # common keywords
+)
+resize_aug = deepcopy(warpaffine_augmentation)
+resize_aug['cfg_list'][1] = edict(name='mono3d.data.augmentation.Resize',  size=data.augmentation.cropSize, preserve_aspect_ratio=True, force_pad=True)
+
+train_dataset = edict(
+    name = "vision_base.data.datasets.dataset_utils.ConcatDataset",
+    training_types = obj_types,
+    max_objects=128,
+    data3d_json = cfg.path.data3d_prior_path,
+    augmentation = resize_aug,
+    cfg_list = [
+        edict(
+            name = "mono3d.data.dataset.JsonMonoDataset",
+            json_path = os.path.join(cfg.path.base_path, 'kitti_object.json'),
+            augmentation = warpaffine_augmentation,
+        ),
+        edict(
+            name = "mono3d.data.dataset.JsonMonoDataset",
+            json_path = os.path.join(cfg.path.base_path, 'nusc_object.json'),
+        ),
+        edict(
+            name = "mono3d.data.dataset.JsonMonoDataset",
+            main_calibration_key='P',
+            json_path = os.path.join(cfg.path.base_path, 'once_object.json'),
+        ),
+        edict(
+            name = "mono3d.data.dataset.Json2DDataset",
+            main_calibration_key='P',
+            json_path = os.path.join(cfg.path.base_path, 'bdd100k_object.json'),
+        ),
+        edict(
+            name = "mono3d.data.dataset.Json2DDataset",
+            main_calibration_key='P',
+            json_path = os.path.join(cfg.path.base_path, 'cityscape_object.json'),
+        ),
+    ],
+)
+
+val_dataset = edict(
+    name = "mono3d.data.dataset.JsonTestDataset",
+    main_calibration_key='P2',
+    json_path = os.path.join(cfg.path.base_path, 'kitti_object.json'),
+    split_file = "/data/kitti_obj/ImageSets/val.txt",
+)
+test_dataset = edict(
+    name = "mono3d.data.dataset.JsonTestDataset",
+    main_calibration_key='P2',
+    json_path = os.path.join(cfg.path.base_path, 'itf_corner_object.json'),
+)
+
+val_dataset.augmentation = edict(
+    name=f'{builder_lib}.Sequential',
+    cfg_list=[
+            edict(name=f'{augmentation_lib}.ConvertToFloat'),
+            edict(name=f'{augmentation_lib}.Resize', size=(512,768), preserve_aspect_ratio=True, force_pad=True),
+            edict(name=f'{augmentation_lib}.Normalize', mean=data.augmentation.rgb_mean, stds=data.augmentation.rgb_std),
+            edict(name=f'{augmentation_lib}.ConvertToTensor'),
+    ],
+    image_keys=['image'],
+    calib_keys=['P'],
+)
+test_dataset.augmentation = val_dataset.augmentation
+    
+cfg.data = data
+cfg.train_dataset = train_dataset
+cfg.val_dataset = val_dataset
+cfg.test_dataset = test_dataset
+
+## networks
+meta_arch = edict(
+    name='mono3d.model.meta_arch.MonoFlex',
+    network_cfg = edict(
+        obj_types=obj_types,
+        backbone_arguments = edict(
+            name='vision_base.networks.models.backbone.dla.dlanet',
+            depth=34,
+            out_indices=(0, 1, 2, 3, 4, 5),
+            pretrained=True,
+        ),
+        head=edict(
+            name            = "mono3d.model.head.MonoFlexHead",
+            learned_classes = cfg.obj_types,
+            num_joints      = 9,
+            max_objects     = 128,
+            data3d_json     = cfg.path.data3d_prior_path,
+            layer_cfg       = edict(
+                input_features=64,
+                head_features=256,
+                head_dict={'hm': len(cfg.obj_types), 'bbox2d': 4, 'hps': 20,
+                        'rot': 8, 'dim': 3, 'reg': 2, 'depth': 1,
+                        "depth_uncertainty": 1, "corner_uncertainty": 3}
+            ),
+            loss_cfg        = edict(
+                gamma=2.0,
+                output_w = data.rgb_shape[1] / 4.0
+            ),
+            test_cfg        = edict(
+                score_thr=0.2,
+            )
+        )
+    )
+)
+
+
+
+cfg.meta_arch = meta_arch
