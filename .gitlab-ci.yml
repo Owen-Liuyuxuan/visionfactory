@@ -1,6 +1,6 @@
 default:
   tags:
-    - test-server
+    - ramlabserver3
   image: yxliuramlab/cuda_jupyter_torch:102_191_0101
 
 stages:
