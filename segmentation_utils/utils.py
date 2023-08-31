@@ -13,6 +13,15 @@ def ColorizeSeg(pred_seg, rgb_image, opacity=1.0, palette=PALETTE):
     new_image = new_image.astype(np.uint8)
     return new_image
 
+@jit(nopython=True, cache=True)
+def ColorizeBev(pred_seg, palette=PALETTE):
+    color_seg = np.zeros((pred_seg.shape[0], pred_seg.shape[1], 3), dtype=np.uint8)
+    h, w = pred_seg.shape
+    for i in range(h):
+        for j in range(w):
+            color_seg[i, j] = palette[pred_seg[i, j]]
+    return color_seg
+
 
 @jit(nopython=True, cache=True)
 def Colorizevoxel(semantic):

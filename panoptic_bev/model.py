@@ -17,18 +17,18 @@ class NaiveBEVMetaArch(BaseMetaArch):
     def _build_model(self):
         self.backbone = build(**self.network_cfg.backbone_cfg)
         self.transform = nn.Sequential(
-            ConvBnReLU(512, 32),
+            ConvBnReLU(2048, 64),
             nn.Flatten(),
             nn.Linear(
-                (192 // 32) * (640 // 32) * 32,
+                (192 // 32) * (640 // 32) * 64,
                 (768 // 16) * (704 // 16) * 32),
         )
         self.upsample = nn.Sequential(
-            ConvBnReLU(32, 16, (3, 3)),
+            ConvBnReLU(32, 32, (3, 3)),
             nn.Upsample(scale_factor=2, mode='bilinear'),
-            ConvBnReLU(16, 16, (3, 3)),
+            ConvBnReLU(32, 32, (3, 3)),
             nn.Upsample(scale_factor=2, mode='bilinear'),
-            nn.Conv2d(16, 45, 1),
+            nn.Conv2d(32, 45, 1),
             nn.Upsample(scale_factor=4)
         )
 
@@ -66,9 +66,13 @@ class NaiveBEVMetaArch(BaseMetaArch):
         feat = self.backbone(img_batch)[0] #[12 * 4]
         bev_features = self.transform(feat).reshape(N, 32, 768 // 16, 704 // 16)
         output = self.upsample(bev_features)
+
+        softmaxed_result = torch.softmax(output, dim=1)
+        prob, pred_seg = torch.max(softmaxed_result, dim=1)
+        # pred_seg[prob < 0.8] = 0
         result_dict = dict(
             logits=feat,
-            pred_seg=torch.argmax(output, dim=1)
+            pred_seg=pred_seg
         )
         return result_dict
 

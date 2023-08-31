@@ -46,13 +46,15 @@ else:
 from numba import jit
 import numpy as np
 @jit
-def addToConfusionMatrix(confusion_matrix, pred_image, label_image):
+def addToConfusionMatrix(confusion_matrix, pred_image, label_image, evalLabels):
     h, w = pred_image.shape
+    nbPixels = 0
     for i in range(h):
         for j in range(w):
-            confusion_matrix[label_image[i, j]][pred_image[i, j]] += 1
-    
-    return confusion_matrix
+            if label_image[i, j] in evalLabels and label_image[i, j] > 0:
+                confusion_matrix[label_image[i, j]][pred_image[i, j]] += 1
+                nbPixels += 1
+    return nbPixels
 
 def getPrediction( config, groundTruthFile ):
     # determine the prediction path, if the method is first called
@@ -564,12 +566,8 @@ def evaluatePair(predictionImgFileName, groundTruthImgFileName, confMatrix, inst
     nbPixels  = imgWidth*imgHeight
 
     # Evaluate images
-    # the slower python way
-    for (groundTruthImgPixel,predictionImgPixel) in izip(groundTruthImg.getdata(),predictionImg.getdata()):
-        if (not groundTruthImgPixel in config.evalLabels):
-            printError("Unknown label with id {:}".format(groundTruthImgPixel))
-
-        confMatrix[groundTruthImgPixel][predictionImgPixel] += 1
+    # the jit python way
+    nbPixels = addToConfusionMatrix(confMatrix, predictionNp, groundTruthNp, config.evalLabels)
 
     if config.evalInstLevelScore:
         # Generate category masks
