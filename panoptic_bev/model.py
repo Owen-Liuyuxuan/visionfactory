@@ -31,16 +31,20 @@ class NaiveBEVMetaArch(BaseMetaArch):
             nn.Conv2d(32, 45, 1),
             nn.Upsample(scale_factor=4)
         )
-
-    def forward_train(self, data, meta):
-        """
-        """
+    
+    def _inference(self, data, meta):
         img_batch = data['image']
-        gts = data['bev_msk'].long()
         N, C, H, W = img_batch.shape
         feat = self.backbone(img_batch)[0] #[12 * 4]
         bev_features = self.transform(feat).reshape(N, 32, 768 // 16, 704 // 16)
         output = self.upsample(bev_features)
+        return output
+
+    def forward_train(self, data, meta):
+        """
+        """
+        output = self._inference(data, meta)
+        gts = data['bev_msk'].long()
 
         gts[gts==-1] = 0
         losses = self.loss(output, gts)
@@ -61,22 +65,21 @@ class NaiveBEVMetaArch(BaseMetaArch):
     def forward_test(self, data, meta):
         """
         """
-        img_batch = data['image']
-        N, C, H, W = img_batch.shape
-        feat = self.backbone(img_batch)[0] #[12 * 4]
-        bev_features = self.transform(feat).reshape(N, 32, 768 // 16, 704 // 16)
-        output = self.upsample(bev_features)
+        output = self._inference(data, meta)
 
         softmaxed_result = torch.softmax(output, dim=1)
         prob, pred_seg = torch.max(softmaxed_result, dim=1)
         # pred_seg[prob < 0.8] = 0
         result_dict = dict(
-            logits=feat,
             pred_seg=pred_seg
         )
         return result_dict
 
     def dummy_forward(self, img_batch):
         N, C, H, W = img_batch.shape
-        feat = self.core(img_batch)['scale_1']
-        return torch.argmax(feat, dim=1)
+        feat = self.backbone(img_batch)[0] #[12 * 4]
+        bev_features = self.transform(feat).reshape(N, 32, 768 // 16, 704 // 16)
+        output = self.upsample(bev_features)
+        softmaxed_result = torch.softmax(output, dim=1)
+        prob, pred_seg = torch.max(softmaxed_result, dim=1)
+        return pred_seg

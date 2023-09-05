@@ -25,7 +25,7 @@ class BEVKitti360Dataset(torch.utils.data.Dataset):
         self._init_params()
         # Folders
         self._img_dir = os.path.join(seam_root_dir, BEVKitti360Dataset._IMG_DIR)
-        self._bev_dir = os.path.join(self.kitti_root_dir, 'generated_bev_msk')
+        self._bev_dir = os.path.join(seam_root_dir, 'bev_msk', 'original_id')
         self._front_msk_dir = os.path.join(seam_root_dir, BEVKitti360Dataset._FRONT_MSK_DIR, "front")
         self._lst_dir = os.path.join(seam_root_dir, BEVKitti360Dataset._LST_DIR)
 
@@ -40,10 +40,11 @@ class BEVKitti360Dataset(torch.utils.data.Dataset):
         ]).reshape([3, 4])
         self.T_cam2velo = np.eye(4)
         self.T_cam2velo[0:3] = T_34
+        self.T_velo2cam = np.linalg.inv(self.T_cam2velo).astype(np.float32)
 
         self.P =  np.array([552.554261, 0.000000, 682.049453, 0.000000,
                            0.000000, 552.554261, 238.769549, 0.000000,
-                           0.000000, 0.000000, 1.000000, 0.000000]).reshape([3, 4])
+                           0.000000, 0.000000, 1.000000, 0.000000]).reshape([3, 4]).astype(np.float32)
         
         self.resolution = 25 / 336
 
@@ -90,7 +91,7 @@ class BEVKitti360Dataset(torch.utils.data.Dataset):
         data['bev_msk'] = np.array(Image.open(bev_msk_file))
 
         data['intrinsic'] = self.P.copy()
-        data['T_cam2velo'] = self.T_cam2velo.copy()
+        data['T_velo2cam'] = self.T_velo2cam.copy()
         data['index'] = item_idx
 
         return data

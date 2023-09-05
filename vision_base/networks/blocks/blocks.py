@@ -18,7 +18,17 @@ class Scale(nn.Module):
 
     def forward(self, x):
         return x * self.scale
+
+class GradientScale(nn.Module):
+    """ Scale the gradient of the output while keeping the output value unchanged 
+    """
+    def __init__(self, scale=1.0):
+        super(GradientScale, self).__init__()
+        self.scale = scale
     
+    def forward(self, x):
+        return x * self.scale + x.detach() * (1 - self.scale)
+
 class DeDict(nn.Module):
     """
     """
@@ -101,6 +111,20 @@ class ConvELU(nn.Module):
         out = self.nonlin(out)
         return out
 
+class LinearLNDropout(nn.Module):
+    """Some Information about LinearLNDropoutReLU"""
+
+    def __init__(self, input_features=1,  num_hiddens=1, drop=0.0):
+        super(LinearLNDropout, self).__init__()
+        self.sequence = nn.Sequential(
+            nn.Linear(input_features, num_hiddens),
+            nn.LayerNorm(num_hiddens),
+            nn.Dropout(drop),
+        )
+
+    def forward(self, x):
+        x = self.sequence(x)
+        return x
 
 class LinearBnReLU(nn.Module):
     """Some Information about LinearBnReLU"""
