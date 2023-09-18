@@ -40,7 +40,7 @@ class Neck(nn.Module):
 
 
 class GridSample(nn.Module):
-    def __init__(self, 
+    def __init__(self,
                 x = [0, 112.64, 0.16],
                 y = [-61.44, 61.44, 0.16],
                 z = [-2.5, 1.5, 0.5],
@@ -52,7 +52,7 @@ class GridSample(nn.Module):
 
         grid_coordinates = get_coordinates(x, y, z) # [X, Y, Z, 3]
         x_size, y_size, z_size, _ = grid_coordinates.shape
-        self.register_buffer('homo_grid_coordinates', 
+        self.register_buffer('homo_grid_coordinates',
                              torch.cat([
                                      grid_coordinates,
                                      torch.ones_like(grid_coordinates[..., 0:1])
@@ -102,7 +102,7 @@ class GridSample(nn.Module):
             offsets = self.offset_projs[i](bev_embedding).reshape(-1, XYZ, self.offset_branch, 2) # [1, XYZ, b, 2]
             weights = self.weight_projs[i](bev_embedding).squeeze(2).unsqueeze(1) # [1, 1, XYZ, b] / [B, 1, XYZ, b]
             feat = F.grid_sample(
-                img_feat, 
+                img_feat,
                 image_coordinate_clean + offsets, # [B, XYZ, b, 2]
             ) # [B, C, XYZ, b]
             feat = torch.sum(feat * weights, dim=-1) # [B, C, XYZ]
@@ -111,7 +111,7 @@ class GridSample(nn.Module):
 
         bev_embedding = bev_embedding.reshape([B, X, Y, Z, self.embedding_size])
         # Average over Z axis, and permute to [BCYX] for dataset alignment
-        bev_embedding = bev_embedding.permute([0, 4, 2, 1, 3]).contiguous().mean(-1) # [B, C, Y, X] 
+        bev_embedding = bev_embedding.permute([0, 4, 2, 1, 3]).contiguous().mean(-1) # [B, C, Y, X]
         return bev_embedding
 
 class GridSampleMetaArch(NaiveBEVMetaArch):

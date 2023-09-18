@@ -5,7 +5,6 @@ import umsgpack
 import numpy as np
 import cv2
 import os
-import json
 from PIL import Image
 
 KITTI360_panoptic_dir = "/data/kitti360_panopticbev"
@@ -42,6 +41,7 @@ def convert_to_original(bev_mask, img_desc_cat, id_mapper):
         for j in range(w):
             output_bev_mask[i, j] = id_mapper[img_desc_cat[bev_mask[i, j]]]
     return output_bev_mask
+
 
 for img_desc in tqdm.tqdm(metadata["images"]):
     bev_msk_file = os.path.join(bev_mask_dir, "{}.png".format(img_desc['id']))

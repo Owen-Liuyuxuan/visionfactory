@@ -20,7 +20,7 @@ class Scale(nn.Module):
         return x * self.scale
 
 class GradientScale(nn.Module):
-    """ Scale the gradient of the output while keeping the output value unchanged 
+    """ Scale the gradient of the output while keeping the output value unchanged
     """
     def __init__(self, scale=1.0):
         super(GradientScale, self).__init__()

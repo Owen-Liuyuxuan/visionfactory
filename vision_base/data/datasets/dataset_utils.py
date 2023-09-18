@@ -54,3 +54,26 @@ class ConcatDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         child_index, index_for_child = self._determine_index(index)
         return self.children[child_index][index_for_child]
+
+class AverageDataset(ConcatDataset):
+    """ This dataset assign weights to each dataset and sample from each dataset based on the weights.
+        The weights should be normalized.
+        Compared to ConcatDataset:
+            1. ConcatDataset assign each data sample with equal probability
+            2. AverageDataset assign each dataset with equal probability / weighted probability
+            3. The indexings are randomed
+    """
+    def __init__(self, _weights=None, *args, **kwargs):
+        super(AverageDataset, self).__init__(*args, **kwargs)
+        self._weights = _weights
+        if self._weights is not None:
+            assert len(self._weights) == len(self.children), 'weights should have same length as children'
+            self._weights = np.array(self._weights)
+            self._weights = self._weights / self._weights.sum()
+
+    def _determine_index(self, index):
+        weights = np.ones(len(self.children)) / len(self.children) \
+                     if self._weights is None else self._weights
+        child_index = np.random.choice(len(self.children), p=weights)
+        index_for_child = np.random.randint(0, len(self.children[child_index]))
+        return child_index, index_for_child
