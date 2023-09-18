@@ -427,7 +427,7 @@ class MonoFlexHead(nn.Module):
 
     def loss(self, output, annotations, meta, P2):
         # epoch = meta['epoch']
-        annotations = self.update_2d_pseudo_label(output, annotations)
+        # annotations = self.update_2d_pseudo_label(output, annotations)
 
         annotations['ind'] = annotations['ind'].long()
         annotations['reg_mask'] = annotations['reg_mask'].bool() # [B, N]
