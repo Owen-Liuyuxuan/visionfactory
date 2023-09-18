@@ -18,7 +18,7 @@ from vision_base.data.dataloader import build_dataloader
 from vision_base.networks.optimizers import optimizers, schedulers
 from vision_base.networks.utils.utils import save_models, load_models
 
-def main(config="configs/config.py", experiment_name="default", world_size=1, local_rank=-1, **kwargs):
+def main(config="configs/config.py", experiment_name="default", world_size=1, **kwargs):
     """Main function for the training script.
 
     KeywordArgs:
@@ -35,13 +35,14 @@ def main(config="configs/config.py", experiment_name="default", world_size=1, lo
     ## Collect distributed(or not) information
     cfg.dist = EasyDict()
     cfg.dist.world_size = world_size
+    local_rank = int(os.environ.get('LOCAL_RANK', -1))
     cfg.dist.local_rank = local_rank
     is_distributed = local_rank >= 0 # local_rank < 0 -> single training
     is_logging     = local_rank <= 0 # only log and test with main process
     is_evaluating  = local_rank <= 0
 
     ## Setup writer if local_rank > 0
-    recorder_dir = os.path.join(cfg.path.log_path, experiment_name + f"config={os.path.basename(config)}")
+    recorder_dir = os.path.join(cfg.path.log_path, experiment_name + f"config={config}")
     if is_logging: # writer exists only if not distributed and local rank is smaller
         ## Clean up the dir if it exists before
         if os.path.isdir(recorder_dir):
@@ -99,7 +100,7 @@ def main(config="configs/config.py", experiment_name="default", world_size=1, lo
     ## Convert to cuda
     if is_distributed:
         meta_arch = torch.nn.SyncBatchNorm.convert_sync_batchnorm(meta_arch)
-        meta_arch = torch.nn.parallel.DistributedDataParallel(meta_arch.cuda(), device_ids=[gpu], output_device=gpu)
+        meta_arch = torch.nn.parallel.DistributedDataParallel(meta_arch.cuda(), device_ids=[gpu], output_device=gpu, find_unused_parameters=True)
     else:
         meta_arch = meta_arch.cuda()
     meta_arch.train()
@@ -128,7 +129,7 @@ def main(config="configs/config.py", experiment_name="default", world_size=1, lo
     old_checkpoint = getattr(cfg.path, 'pretrained_checkpoint', None)
     if old_checkpoint is not None:
         load_models(old_checkpoint,
-                    meta_arch.module if is_distributed else meta_arch,
+                    meta_arch,
                     optimizer,
                     map_location=f'cuda:{gpu}')
 
@@ -141,14 +142,14 @@ def main(config="configs/config.py", experiment_name="default", world_size=1, lo
         raise KeyError
 
     ## Get evaluation pipeline
-    if 'evaluate_hook' in cfg.trainer:
+    if is_evaluating and 'evaluate_hook' in cfg.trainer:
         evaluate_hook = build(result_path_split='validation', **cfg.trainer.evaluate_hook)
         from vision_base.pipeline_hooks.evaluation_hooks.base_evaluation_hooks import BaseEvaluationHook
         assert isinstance(evaluate_hook, BaseEvaluationHook)
         print("Found evaluate function {}".format(cfg.trainer.evaluate_hook.name))
     else:
         evaluate_hook = None
-        print("Evaluate function not found")
+        print(f"Evaluate function not found or not used in local_rank={local_rank}")
 
 
     ## timer is used to estimate eta
