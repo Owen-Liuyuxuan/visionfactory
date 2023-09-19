@@ -1,5 +1,4 @@
 from __future__ import print_function, division
-import os
 import torch
 import numpy as np
 from easydict import EasyDict
@@ -7,7 +6,7 @@ import json
 from typing import List, Dict
 
 from copy import deepcopy
-from dgp.datasets.synchronized_dataset import SynchronizedSceneDataset
+
 from vision_base.utils.builder import build
 from mono3d.model.utils import BBox3dProjector, theta2alpha_3d
 from mono3d.model.rtm3d_utils import gen_hm_radius, gaussian_radius
@@ -64,7 +63,7 @@ class JsonMonoDataset(torch.utils.data.Dataset):
 
         ## MonoFlex Params
         self.num_classes = len(self.training_types)
-        self.num_vertexes = 11
+        self.num_vertexes = 10
         self.max_objects = getattr(data_cfg, 'max_objects', 32)
         self.projector = BBox3dProjector()
         self.projector.register_buffer('corner_matrix', torch.tensor(
@@ -461,38 +460,6 @@ class JsonTestDataset(torch.utils.data.Dataset):
         calibration = self.calibs[index]
         data['P'] = deepcopy(
             np.array(calibration[self.main_calibration_key])).reshape(3, 4)
-        data['original_P'] = data['P'].copy()
-        data = self.transform(data)
-
-        return data
-
-class DGPTestDataset(torch.utils.data.Dataset):
-    def __init__(self, **data_cfg):
-        data_cfg = EasyDict(data_cfg)
-        super(DGPTestDataset, self).__init__()
-        json_path = getattr(data_cfg, 'json_path', '/data/data.json')
-        split     = getattr(data_cfg, 'split', 'train')
-
-        self.scene_files = json.load(open(json_path, 'r'))['scene_splits']['0']['filenames']
-        self.base_dir_name = os.path.dirname(json_path)
-        self.camera_names = ['CAMERA_01', 'CAMERA_05', 'CAMERA_06', 'CAMERA_07', 'CAMERA_08', 'CAMERA_09']
-
-        self.dgp_dataset = SynchronizedSceneDataset(
-            json_path, split=split, datum_names=self.camera_names
-        )
-        self.transform = build(**data_cfg.augmentation)
-
-    def __len__(self):
-        return len(self.dgp_dataset)
-
-    def __getitem__(self, index):
-        
-        dgp_data = self.dgp_dataset[index]
-
-        data = dict()
-        data['image'] = np.array(dgp_data['rgb']) #[RGB]
-        data['P'] = np.zeros([3, 4])
-        data['P'][0:3, 0:3] = dgp_data['intrinsics']
         data['original_P'] = data['P'].copy()
         data = self.transform(data)
 
