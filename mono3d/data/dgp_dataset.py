@@ -1,6 +1,7 @@
 import os
 import json
 import numpy as np
+import torch
 from easydict import EasyDict
 from dgp.datasets.synchronized_dataset import SynchronizedSceneDataset
 from vision_base.utils.builder import build
