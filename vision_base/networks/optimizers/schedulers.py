@@ -75,7 +75,7 @@ class GradualWarmupScheduler(optim.lr_scheduler._LRScheduler):
         else:
             self.step_ReduceLROnPlateau(metrics, epoch)
 
-def build_scheduler(optimizer, name=None, **kwargs)->optim.lr_scheduler.LRScheduler:
+def build_scheduler(optimizer, name=None, **kwargs):
     if name is None:
         return optim.lr_scheduler.ExponentialLR(optimizer, 1.0)
     if name.lower() == 'StepLR'.lower():

@@ -123,3 +123,4 @@ workdirs
 *.onnx
 *.avi
 *_object.json
+*_val.json
