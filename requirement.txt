@@ -11,3 +11,4 @@ fire
 tqdm
 numba
 scikit-image
+pycocotools
