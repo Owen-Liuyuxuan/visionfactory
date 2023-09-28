@@ -1,5 +1,4 @@
 from __future__ import print_function, division
-import os
 import torch
 import numpy as np
 from easydict import EasyDict
@@ -7,7 +6,7 @@ import json
 from typing import List, Dict
 
 from copy import deepcopy
-from dgp.datasets.synchronized_dataset import SynchronizedSceneDataset
+
 from vision_base.utils.builder import build
 from mono3d.model.utils import BBox3dProjector, theta2alpha_3d
 from mono3d.model.rtm3d_utils import gen_hm_radius, gaussian_radius
@@ -79,7 +78,7 @@ class JsonMonoDataset(torch.utils.data.Dataset):
             [ 0,  1,  0],  #8
             [ 0, -1,  0],  #9
             [ 0,  0,  0]]  #10
-        ).float()  )# 10, 3
+        ).float()  )# 11, 3
 
         self.main_calibration_key = getattr(data_cfg, 'main_calibration_key', 'P2')
 
@@ -192,8 +191,7 @@ class JsonMonoDataset(torch.utils.data.Dataset):
                 keypoints_visible = keypoints_visible.astype(np.float32)
 
                 ## MonoFlex use the projected 3D as the center
-                #center = np.array([(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], dtype=np.float32)
-                center = homo_corner[k, 10, 0:2].numpy() / scale
+                center = np.array([(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], dtype=np.float32)
                 center_int = center.astype(np.int32)
                 
                 if not (0 <= center_int[0] < hm_w and 0 <= center_int[1] < hm_h):
@@ -221,7 +219,8 @@ class JsonMonoDataset(torch.utils.data.Dataset):
                         indices_vertexes[k * self.num_vertexes + ver_idx] = ver_int[1] * hm_w + ver_int[0]
 
                 # targets for center offset
-                cen_offset[k] = center - center_int
+                center_3d = homo_corner[k, 10, 0:2].numpy() / scale
+                cen_offset[k] = center_3d - center_int
 
                 ## targets for fcos 2d
                 fcos_bbox2d_target[k] = np.array(
@@ -370,7 +369,7 @@ class Json2DDataset(JsonMonoDataset):
                 """
                 gen_hm_radius(hm_main_center[cls_id], center, radius)
                 x_min, y_min, x_max, y_max = bbox.astype(np.int32)
-                hm_main_center[cls_id][y_min:y_max, x_min:x_max] = -1
+
                 # Index of the center
                 indices_center[k] = center_int[1] * hm_w + center_int[0]
 
@@ -461,38 +460,6 @@ class JsonTestDataset(torch.utils.data.Dataset):
         calibration = self.calibs[index]
         data['P'] = deepcopy(
             np.array(calibration[self.main_calibration_key])).reshape(3, 4)
-        data['original_P'] = data['P'].copy()
-        data = self.transform(data)
-
-        return data
-
-class DGPTestDataset(torch.utils.data.Dataset):
-    def __init__(self, **data_cfg):
-        data_cfg = EasyDict(data_cfg)
-        super(DGPTestDataset, self).__init__()
-        json_path = getattr(data_cfg, 'json_path', '/data/data.json')
-        split     = getattr(data_cfg, 'split', 'train')
-
-        self.scene_files = json.load(open(json_path, 'r'))['scene_splits']['0']['filenames']
-        self.base_dir_name = os.path.dirname(json_path)
-        self.camera_names = ['CAMERA_01', 'CAMERA_05', 'CAMERA_06', 'CAMERA_07', 'CAMERA_08', 'CAMERA_09']
-
-        self.dgp_dataset = SynchronizedSceneDataset(
-            json_path, split=split, datum_names=self.camera_names
-        )
-        self.transform = build(**data_cfg.augmentation)
-
-    def __len__(self):
-        return len(self.dgp_dataset)
-
-    def __getitem__(self, index):
-        
-        dgp_data = self.dgp_dataset[index]
-
-        data = dict()
-        data['image'] = np.array(dgp_data['rgb']) #[RGB]
-        data['P'] = np.zeros([3, 4])
-        data['P'][0:3, 0:3] = dgp_data['intrinsics']
         data['original_P'] = data['P'].copy()
         data = self.transform(data)
 

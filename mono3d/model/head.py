@@ -427,7 +427,7 @@ class MonoFlexHead(nn.Module):
 
     def loss(self, output, annotations, meta, P2):
         # epoch = meta['epoch']
-        annotations = self.update_2d_pseudo_label(output, annotations)
+        # annotations = self.update_2d_pseudo_label(output, annotations)
 
         annotations['ind'] = annotations['ind'].long()
         annotations['reg_mask'] = annotations['reg_mask'].bool() # [B, N]
@@ -438,7 +438,7 @@ class MonoFlexHead(nn.Module):
         # keypoint L1 loss
         hp_loss = self._RegWeightedL1Loss(output['hps'],annotations['hps_mask'], annotations['ind'], annotations['hps'],annotations['dep'].clone())
         # rotations from RTM3D
-        rot_loss = self._RotLoss(output['rot'], annotations['reg_mask'], annotations['ind'], annotations['rotbin'], annotations['rotres'])
+        rot_loss = self._RotLoss(output['rot'], annotations['3D_reg_mask'], annotations['ind'], annotations['rotbin'], annotations['rotres'])
 
         # gather output
         gathered_output = self._gather_output(output, annotations['ind'], annotations['3D_reg_mask'], annotations['reg_mask'])
