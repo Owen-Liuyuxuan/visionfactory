@@ -9,8 +9,6 @@ def build_path():
     path = edict()
     path.kitti360_path = "/data/KITTI-360"
     path.train_split_file = "/data/KITTI-360/data_2d_semantics/train/2013_05_28_drive_train_frames.txt"
-    # path.train_split_file = "/data/KITTI-360/data_2d_semantics/train/overfit.txt"
-    # path.val_split_file = "/data/KITTI-360/data_2d_semantics/train/overfit.txt"
     path.val_split_file = "/data/KITTI-360/data_2d_semantics/train/2013_05_28_drive_val_frames.txt"
     path.base_path = "/home/yliuhb/vision_collection/src/learning/FSNet"
     path.project_path = "/home/yliuhb/vision_collection/src/learning/FSNet/workdirs"
@@ -122,7 +120,6 @@ train_dataset.augmentation = edict(
     name=f'{builder_lib}.Sequential',
     cfg_list = [
         edict(name=f'{augmentation_lib}.ConvertToFloat'),
-        # edict(name='lib.data.augmentations.augmentations.RandomWarpAffine', output_w=data.augmentation.cropSize[1], output_h=data.augmentation.cropSize[0]),
         edict(name=f'{augmentation_lib}.Resize', size=data.augmentation.cropSize,preserve_aspect_ratio=False # this should rewrite the keywords outside 
            ),
         edict(name=f'{builder_lib}.Shuffle', 

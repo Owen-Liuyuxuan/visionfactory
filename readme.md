@@ -29,7 +29,7 @@ This operation will build the dcn module inplace and does not install anything.
 
 ## General Usage
 
-Start **Everything** in the base directory of this repo.
+Start **Everything** in the base directory of this repo. Please check out each tasks([mono3d]/[segmentation]/[monodepth]) for dataset preparation.
 
 Training:
 
@@ -48,7 +48,7 @@ python3 scripts/test.py $CONFIG_PATH $SINGLE_GPU $CHECKPOINT
 
 ## Check the Logging
  
-By default, the train scripts and vision_base will create a detailed tensorflow report besides the logging from specific packages. The logging will be in ```./workdirs/\$NAME_IN_CONFIG/log/\$\{EXPERIMENT_LOGGING_NAME\}config=$CONFIG_NAME```, we suggest tensorboard open in ```workdirs/\$NAME_IN_CONFIG/log/``` or ```./workdirs/```.
+By default, the train scripts and vision_base will create a detailed tensorflow report besides the logging from specific packages. The logging will be in ```./workdirs/\$NAME_IN_CONFIG/log/${EXPERIMENT_LOGGING_NAME}config=${CONFIG_NAME}```, we suggest tensorboard open in ```workdirs/$NAME_IN_CONFIG/log/``` or ```./workdirs/```.
 
 The tensorboard report will include the **full expanded** config file 
 
@@ -66,9 +66,9 @@ In general, we recommend not making breaking change in vision_base (adding more 
 
 If we are starting a new project with new data settings / new models / new strategies, it is recommended to start a new folder and overwrite existing classes, and write config files pointing to new modules. This is achieved by [builder](./vision_base/utils/builder.py) and [find_object](./vision_base/utils/utils.py).
 
-Check the [segmenatation](./segmentation/) for how to start a simple new project.
+Check the codes in [segmenatation](./segmentation/) for how to start a simple new project.
 
-Check the [mono3d](./mono3d/) for how to overwrite data pipeline for complex tasks.
+Check the codes in [mono3d](./mono3d/) for how to overwrite data pipeline for complex tasks.
 
 ## Further Info and Bug Issues
 
