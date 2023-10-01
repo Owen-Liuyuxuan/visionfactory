@@ -1,5 +1,5 @@
 [flake8]
-exclude = segmentation_utils,segmentation/evaluation,docs,demos,dockers,meta_data,workdirs,
+exclude = segmentation/evaluation,docs,demos,dockers,meta_data,workdirs,
         .ipynb_checkpoints,ops,mdeq.py,configs,tests,scripts/_path_init.py,convnext.py,vit.py,labels.py,
         mono3d/evaluation,
 docstring-convention = google

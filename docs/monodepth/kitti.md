@@ -1,4 +1,4 @@
-# KITTI Datasets
+# KITTI RAW Datasets
 
 We test on the KITTI RAW sequences
 

@@ -8,7 +8,7 @@ We provide cookbooks and solutions for Full-Scale Unsupervised Depth Prediction 
 
 Reference: this repo borrow codes and ideas from [visualDet3D], [monodepth2]. 
 
-![image](docs/index.png)
+![image](index.png)
 
 ## Setup:
 
