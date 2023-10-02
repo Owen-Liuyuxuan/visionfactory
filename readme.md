@@ -8,7 +8,7 @@ This repo contains the training/inference/export codes to obtain the three indep
 
 The general starting points/runtime backbone will be in the "scripts", common modules, runtime plugins and helper functions will be in "vision_base". 
 
-For different tasks, we may meed to overwrite parts of the dataloader / model / evaluator. Checkout [mono3d], [segmentation], [monodepth] for their settings and module overview.
+**For different tasks, we may meed to overwrite parts of the dataloader / model / evaluator. Checkout [mono3d], [segmentation], [monodepth] for their settings and module overview.**
 
 **Notice For FSNet Users:** The training/testing scripts, vision_base and even the monodepth folder are basically the same as [FSNet](https://github.com/Owen-Liuyuxuan/FSNet). For monodepth tasks, for now it is completely fine to directly transferring configs/checkpoints across this two repos. We try to guarantee the backward compliance, especially in the scripts and vision_base package.
 
