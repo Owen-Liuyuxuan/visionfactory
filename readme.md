@@ -4,7 +4,7 @@ This is a general repo for training and testing vision tasks (monocular 3D detec
 
 ![image](./docs/vision_base/kitti360_all_on_gif_demo.gif)
 
-This repo contains the training/inference/export codes to obtain the three independent network models trained with completely different strategies (Notice: ROS Nodes and Dataset bridges are in other repos).
+This repo contains the training/inference/export codes to obtain the three independent network models trained with completely different strategies (Notice: ROS Nodes and Dataset bridges are in other repos). Demonstration-Ready Models are in [release page](https://github.com/Owen-Liuyuxuan/visionfactory/releases/tag/v1.0).
 
 The general starting points/runtime backbone will be in the "scripts", common modules, runtime plugins and helper functions will be in "vision_base". 
 
