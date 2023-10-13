@@ -22,8 +22,9 @@ def a2d2_find_similar_label(name, kitti360_labels):
     name = name.replace('speed bumper', 'unlabeled')
     name = name.replace('solid line', 'road')
     name = name.replace('rd normal street', 'road')
+    name = name.replace('nature object', 'vegetation')
 
-    ## Completely same
+    ## Completely sameNature object
     for kitti360_label in kitti360_labels:
         if kitti360_label.name == name:
             return name, kitti360_label
