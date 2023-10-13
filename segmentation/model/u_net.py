@@ -150,7 +150,7 @@ class OutConv(nn.Module):
 
 
 class UNet_Core(nn.Module):
-    def __init__(self, n_channels, n_classes, bilinear=True, backbone_arguments=dict()):
+    def __init__(self, n_channels=3, n_classes=45, bilinear=True, backbone_arguments=dict()):
         super(UNet_Core, self).__init__()
         self.backbone = build(**backbone_arguments)
         self.n_channels = n_channels

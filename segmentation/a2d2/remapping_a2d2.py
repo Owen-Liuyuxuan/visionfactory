@@ -21,6 +21,7 @@ def a2d2_find_similar_label(name, kitti360_labels):
     name = name.replace('sidebars', 'guard rail')
     name = name.replace('speed bumper', 'unlabeled')
     name = name.replace('solid line', 'road')
+    name = name.replace('rd normal street', 'road')
 
     ## Completely same
     for kitti360_label in kitti360_labels:
