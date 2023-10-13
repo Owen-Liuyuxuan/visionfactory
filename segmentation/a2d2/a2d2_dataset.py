@@ -16,7 +16,7 @@ def read_split_file(file_path, sample_over=1):
         lines = f.readlines()
         for i, line in enumerate(lines):
             if i % sample_over == 0:
-                splitted = line.strip()
+                splitted = line.strip().split()
                 obj = dict()
                 obj['image_path'] = splitted[0]
                 obj['gt_path'] = splitted[1]
@@ -30,21 +30,23 @@ def read_directory(base_path, sample_over=1):
         sequence_path = os.path.join(base_path, sequence)
         if not os.path.isdir(sequence_path):
             continue
-        image_dir = os.path.join(sequence_path, 'camera', 'cam_front_center')
-        label_dir = os.path.join(sequence_path, 'remapped_label', 'cam_front_center')
-        images = os.listdir(image_dir)
-        images = [image for image in images if image.endswith('.png')]
-        images.sort()
-        labels = os.listdir(label_dir)
-        labels = [label for label in labels if label.endswith('.png')]
-        labels.sort()
-        for i, image in enumerate(images):
-            if i % sample_over != 0:
-                continue
-            obj = dict()
-            obj['image_path'] = os.path.join(image_dir, image)
-            obj['gt_path'] = os.path.join(label_dir, image.replace('camera', 'label'))
-            imdb.append(obj)
+        image_dir = os.path.join(sequence_path, 'camera') # 'cam_front_center')
+        for camera in os.listdir(image_dir):
+            image_cam_dir = os.path.join(image_dir, camera)
+            label_cam_dir = os.path.join(sequence_path, 'remapped_label', camera)
+            images = os.listdir(image_cam_dir)
+            images = [image for image in images if image.endswith('.png')]
+            images.sort()
+            labels = os.listdir(label_cam_dir)
+            labels = [label for label in labels if label.endswith('.png')]
+            labels.sort()
+            for i, image in enumerate(images):
+                if i % sample_over != 0:
+                    continue
+                obj = dict()
+                obj['image_path'] = os.path.join(image_cam_dir, image)
+                obj['gt_path'] = os.path.join(label_cam_dir, image.replace('camera', 'label'))
+                imdb.append(obj)
 
     return imdb
 
@@ -81,7 +83,7 @@ class A2D2Dataset(Dataset):
 
 if __name__ == "__main__":
     cfg = EasyDict()
-    cfg.base_path = '/data/a2d2/camera_lidar_semantic_bboxes'
+    cfg.base_path = '/data/a2d2/camera_lidar_semantic'
     cfg.sample_over = 1
     # cfg.split_file = '/data/ApolloScene/road03_ins_train.lst'
     dataset = A2D2Dataset(**cfg)

@@ -32,14 +32,16 @@ def a2d2_find_similar_label(name, kitti360_labels):
             return name, kitti360_label
     return name, None
 
+@numba.jit(nopython=True)
 def remapping_label(original_seg, mapping):
     output = np.zeros((original_seg.shape[0], original_seg.shape[1]), dtype=np.uint8)
-    for key, value in mapping.items():
-        mask = (original_seg == np.array(key)).all(axis=-1)
-        output[mask] = value
+    for i in range(original_seg.shape[0]):
+        for j in range(original_seg.shape[1]):
+            r, g, b = original_seg[i, j, 0], original_seg[i, j, 1], original_seg[i, j, 2]
+            output[i, j] = mapping[r, g, b]
     return output
 
-def remapping_a2d2_to_kitti360(base_path="/data/a2d2/camera_lidar_semantic_bboxes", output_path="/home/remapped_a2d2"):
+def remapping_a2d2_to_kitti360(base_path="/data/a2d2/camera_lidar_semantic", output_path="/home/remapped_a2d2"):
     os.makedirs(output_path, exist_ok=True)
     a2d2_class_color = json.load(open("./segmentation/a2d2/class_list.json"))
     class_to_color = {}
@@ -61,24 +63,32 @@ def remapping_a2d2_to_kitti360(base_path="/data/a2d2/camera_lidar_semantic_bboxe
         kitti_id = mapping[a2d2_class_name]
         color_to_kitti_id[color] = kitti_id
     
+    # numpy version
+    numpy_mapping = np.zeros((256, 256, 256), dtype=np.uint8)
+    for k, v in color_to_kitti_id.items():
+        numpy_mapping[k] = v
+
     sequence_times = os.listdir(base_path)
     for sequence_time in sequence_times:
         sequence_dir = os.path.join(base_path, sequence_time)
         if not os.path.isdir(sequence_dir):
             continue
-        label_dir = os.path.join(sequence_dir, "label", "cam_front_center")
-        output_sequence_dir = os.path.join(output_path, sequence_time)
-        output_label_dir  = os.path.join(output_sequence_dir, "remapped_label", "cam_front_center")
-        os.makedirs(output_label_dir, exist_ok=True)
-        labels = os.listdir(label_dir)
-        labels = [label for label in labels if label.endswith(".png")]
-        labels.sort()
-        print("Processing {}".format(sequence_time))
-        for label in tqdm.tqdm(labels):
-            label_path = os.path.join(label_dir, label)
-            label_image = cv2.imread(label_path)[..., ::-1]
-            output_label = remapping_label(label_image, color_to_kitti_id)
-            cv2.imwrite(os.path.join(output_label_dir, label), output_label)
+        label_dir = os.path.join(sequence_dir, "label")
+        camera_names = os.listdir(label_dir)
+        for camera in camera_names:
+            label_cam_dir = os.path.join(label_dir, camera)
+            output_sequence_dir = os.path.join(output_path, sequence_time)
+            output_label_cam_dir  = os.path.join(output_sequence_dir, "remapped_label", camera)
+            os.makedirs(output_label_cam_dir, exist_ok=True)
+            labels = os.listdir(label_cam_dir)
+            labels = [label for label in labels if label.endswith(".png")]
+            labels.sort()
+            print("Processing {}".format(sequence_time))
+            for label in tqdm.tqdm(labels):
+                label_path = os.path.join(label_cam_dir, label)
+                label_image = cv2.imread(label_path)[..., ::-1]
+                output_label = remapping_label(label_image, numpy_mapping)
+                cv2.imwrite(os.path.join(output_label_cam_dir, label), output_label)
 
 if __name__ == "__main__":
     Fire(remapping_a2d2_to_kitti360)
