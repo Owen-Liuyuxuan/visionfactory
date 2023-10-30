@@ -42,6 +42,14 @@ class ConcatDataset(torch.utils.data.Dataset):
             seperator.append(seperator[-1] + len(child))
         self.seperator = np.array(seperator)
         self.total_length = self.seperator[-1] + len(self.children[-1])
+        self.print_review()
+    
+    def print_review(self):
+        print("ConcatDataset: ")
+        for i, child in enumerate(self.children):
+            print(f"    {i}: {child}")
+        print(f"    total_length: {self.total_length}")
+        print(f"    seperator: {self.seperator}")
 
     def __len__(self):
         return self.total_length
