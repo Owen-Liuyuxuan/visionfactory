@@ -2,7 +2,9 @@
 import torch
 import torch.nn as nn
 from vision_base.networks.models.meta_archs.base_meta import BaseMetaArch
+from vision_base.utils.builder import build
 from .u_net import Seg_UNet_Core
+
 
 class UNetSeg(BaseMetaArch):
     """ MonoDepthDorn modified from
@@ -12,12 +14,12 @@ class UNetSeg(BaseMetaArch):
         super(UNetSeg, self).__init__()
     
         self.output_channel = getattr(network_cfg, 'output_channel', 34)
-        self.backbone_arguments = getattr(network_cfg, 'backbone')
 
-        self.core = Seg_UNet_Core(3, self.output_channel, backbone_arguments=self.backbone_arguments)
+        if 'name' not in network_cfg:
+            network_cfg['name'] = 'segmentation.model.u_net.Seg_UNet_Core'
+        self.core = build(**network_cfg)
 
         self.loss = nn.CrossEntropyLoss(ignore_index=0, reduction='none')
-        #self.loss = DiceLoss(ignore_index=0)
 
     def forward_train(self, data, meta):
         """

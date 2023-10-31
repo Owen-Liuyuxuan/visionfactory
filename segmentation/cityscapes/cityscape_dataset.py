@@ -48,15 +48,9 @@ class CityscapeDataset(Dataset):
     def __getitem__(self, index):
         obj = self.imdb[index]
         data = dict()
-        try:
-            data['image'] = read_image(os.path.join(self.base_path, obj['image_path']))
-            data['gt_image'] = read_image(os.path.join(self.base_path, obj['gt_path']))
-            data['original_shape'] = data['image'].shape
-        except:
-            print("Error in reading {}".format(obj['image_path']))
-            data['image'] = None
-            data['gt_image'] = None
-            data['original_shape'] = None
+        data['image'] = read_image(os.path.join(self.base_path, obj['image_path']))
+        data['gt_image'] = read_image(os.path.join(self.base_path, obj['gt_path']))
+        data['original_shape'] = data['image'].shape
         data = self.transform(deepcopy(data))
         return data
 
