@@ -2,6 +2,7 @@ import torch.nn as nn
 from vision_base.networks.models.meta_archs.base_meta import BaseMetaArch
 from vision_base.utils.builder import build
 from vision_base.networks.models.backbone.dla import DLA
+from vision_base.networks.models.backbone.yolo import YOLOPAFPN
 from vision_base.networks.models.backbone.dla_utils import DLASegUpsample
 
 class MonoFlex_core(nn.Module):
@@ -19,6 +20,14 @@ class MonoFlex_core(nn.Module):
                 final_kernel=1,
                 last_level=5,
                 out_channel=64, ## Notice that if in DLA the head_feature_size should be 256 and input features should be 64 for the heads.
+            )
+        elif isinstance(self.backbone, YOLOPAFPN):
+            feature_size = 256
+            output_features = int(256 * self.backbone.width) 
+            self.deconv_layers = nn.Sequential(
+                nn.ConvTranspose2d(output_features, feature_size, (4, 4), stride=(2, 2), padding=(1, 1), bias=False),
+                nn.BatchNorm2d(feature_size),
+                nn.SiLU(inplace=True),
             )
         else:
             feature_size = 256
@@ -43,6 +52,8 @@ class MonoFlex_core(nn.Module):
         x = self.backbone(x['image'])
         if isinstance(self.backbone, DLA):
             x = self.deconv_layers(x)
+        elif isinstance(self.backbone, YOLOPAFPN):
+            x = self.deconv_layers(x[0])
         else:
             x = self.deconv_layers(x[-1])
         return x

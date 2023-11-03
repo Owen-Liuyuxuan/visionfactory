@@ -25,6 +25,8 @@ class YOLOPAFPN(nn.Module):
         act="silu",
     ):
         super().__init__()
+        self.depth = depth
+        self.width = width
         self.backbone = CSPDarknet(depth, width, depthwise=depthwise, act=act)
         self.in_features = in_features
         self.in_channels = in_channels
