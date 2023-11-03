@@ -12,6 +12,7 @@ Optionally, most transforms should have an __init__ function as well, if needed.
 
 import numpy as np
 from numpy import random
+from typing import Optional
 import torch
 import cv2
 from vision_base.utils.builder import Sequential
@@ -341,11 +342,15 @@ class FilterObject(object):
         return data
 
 class RandomCropToWidth(object):
-    def __init__(self, width:int,
+    def __init__(self, width:Optional[int]=None,
+                 width_ratio_range:Optional[tuple]=None,
                 image_keys=['image'],
                 gt_image_keys=[],
                 calib_keys=[],):
         self.width = width
+        self.width_ratio_range = width_ratio_range
+        assert self.width is not None or self.width_ratio_range is not None, \
+              "Either width or width_ratio_range should not be None"
         self.image_keys = image_keys
         self.calib_keys = calib_keys
         self.gt_image_keys = gt_image_keys
@@ -354,12 +359,18 @@ class RandomCropToWidth(object):
         height, width = data[self.image_keys[0]].shape[0:2]
         original_width = width
 
-        if self.width > original_width:
+        if self.width is not None:
+            output_width = self.width
+        elif self.width_ratio_range is not None:
+            output_width = int(np.random.uniform(*self.width_ratio_range) * original_width)
+        else:
+            raise NotImplementedError
+        
+        if output_width > original_width:
             print("does not crop since it is larger")
             return data
-
-        lefter = np.random.randint(0, original_width - self.width)
-        righter = lefter + self.width
+        lefter = np.random.randint(0, original_width - output_width)
+        righter = lefter + output_width
 
 
         for key in (self.image_keys + self.gt_image_keys):

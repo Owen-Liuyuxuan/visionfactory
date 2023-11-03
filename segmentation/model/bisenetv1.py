@@ -250,6 +250,14 @@ class BiSeNetV1(nn.Module):
             nn.Conv2d(out_channels, output_num_classes, kernel_size=1),
             nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True)
         )
+        self.context_8_conv = nn.Sequential(
+            nn.Conv2d(context_channels[0], output_num_classes, kernel_size=1),
+            nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True)
+        )
+        self.context_16_conv = nn.Sequential(
+            nn.Conv2d(context_channels[0], output_num_classes, kernel_size=1),
+            nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)
+        )
 
     def forward(self, x):
         # stole refactoring code from Coin Cheung, thanks
@@ -259,6 +267,8 @@ class BiSeNetV1(nn.Module):
 
         outs = [x_fuse, x_context8, x_context16]
         outs = [outs[i] for i in self.out_indices]
-        feat = self.outConv(outs[0])
-        return dict(scale_1=feat)
+        feat_1 = self.outConv(outs[0])
+        feat_2 = self.context_8_conv(outs[1])
+        feat_3 = self.context_16_conv(outs[2])
+        return dict(scale_1=feat_1, scale_2=feat_2, scale_3=feat_3)
 

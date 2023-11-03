@@ -1,9 +1,22 @@
-
+from typing import List
 import torch
 import torch.nn as nn
 from vision_base.networks.models.meta_archs.base_meta import BaseMetaArch
 from vision_base.utils.builder import build
 from .u_net import Seg_UNet_Core
+
+class MultiScaleCrossEntropyLoss(nn.CrossEntropyLoss):
+    def forward(self, inputs:List[torch.Tensor], target:torch.Tensor):
+        total_loss = 0
+        for inp in inputs:
+            loss = super().forward(inp, target)
+            loss = torch.where(
+                loss < 1e-5,
+                loss * 1e-2,
+                loss
+            )
+            total_loss += loss
+        return total_loss
 
 
 class UNetSeg(BaseMetaArch):
@@ -19,7 +32,7 @@ class UNetSeg(BaseMetaArch):
             network_cfg['name'] = 'segmentation.model.u_net.Seg_UNet_Core'
         self.core = build(**network_cfg)
 
-        self.loss = nn.CrossEntropyLoss(ignore_index=0, reduction='none')
+        self.loss = MultiScaleCrossEntropyLoss(ignore_index=0, reduction='none')
 
     def forward_train(self, data, meta):
         """
@@ -29,12 +42,7 @@ class UNetSeg(BaseMetaArch):
         N, C, H, W = img_batch.shape
         feat = self.core(img_batch)
         gts[gts==-1] = 0
-        losses = self.loss(feat['scale_1'], gts)
-        losses = torch.where(
-            losses < 1e-5,
-            losses * 1e-2,
-            losses
-        )
+        losses = self.loss([feat[f'scale_{i+1}'] for i in range(3) ], gts)
         losses = losses.mean()
 
         return_dict = dict(
