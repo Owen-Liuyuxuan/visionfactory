@@ -6,7 +6,7 @@ We offer to test on the daytime sequences of Nuscenes dataset.
 
 ## Jsonify NuScenes dataset
 
-Check [meta_data/nusc_trainsub/json_from_cfg.ipynb](../meta_data/nusc_trainsub/json_from_cfg.ipynb) and modify the data path.
+Check [../../meta_data/nusc_trainsub/json_from_cfg.ipynb](../meta_data/nusc_trainsub/json_from_cfg.ipynb) and modify the data path.
 
 Run through the notebook to output jsonify nuscenes data. This will increase start-up speed and lower dataset memory usage. 
 
