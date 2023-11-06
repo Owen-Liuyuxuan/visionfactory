@@ -130,3 +130,11 @@ class MonoFlex(BaseMetaArch):
         original_bboxes = self.resize_bboxes_to_original(bboxes, P2[0], data['original_P'][0])
 
         return dict(scores=scores, bboxes=bboxes, cls_names=cls_names, original_bboxes=original_bboxes)
+
+    def dummy_forward(self, image, P2):
+        """
+        """
+        features = self.core(dict(image=image, P2=P2))
+        output_dict = self.bbox_head(features)
+        scores, bboxes, cls_indexes = self.bbox_head.export_get_bboxes(output_dict, P2, image)
+        return scores, bboxes, cls_indexes

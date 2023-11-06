@@ -13,7 +13,7 @@ def theta2alpha_3d(theta, x, z, P2):
     """
     offset = P2[0, 3] / P2[0, 0]
     if isinstance(theta, torch.Tensor):
-        alpha = theta - torch.atan2(x + offset, z)
+        alpha = theta - torch.atan((x + offset) / (z + 1e-6))
     else:
         alpha = theta - np.arctan2(x + offset, z)
     return alpha
@@ -30,7 +30,7 @@ def alpha2theta_3d(alpha, x, z, P2):
     """
     offset = P2[0, 3] / P2[0, 0]
     if isinstance(alpha, torch.Tensor):
-        theta = alpha + torch.atan2(x + offset, z)
+        theta = alpha + torch.atan((x + offset) / (z + 1e-6)) #torch.atan2(x + offset, z)
     else:
         theta = alpha + np.arctan2(x + offset, z)
     return theta

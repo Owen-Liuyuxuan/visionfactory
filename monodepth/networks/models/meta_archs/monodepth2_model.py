@@ -135,9 +135,9 @@ class MonoDepthWPose(BaseMetaArch):
         depth_prediction = self.head.get_prediction(data, outputs)
         return depth_prediction
     
-    def dummy_forward(self, image):
+    def dummy_forward(self, image, P):
         features = self.depth_backbone(image)
-        outputs = self.head.forward_depth(features)
+        outputs = self.head.forward_depth(features, P)
         depth_prediction = self.head.get_prediction(None, outputs)
         return depth_prediction
 

@@ -352,6 +352,77 @@ class MonoFlexHead(nn.Module):
         alpha2 = torch.atan(rot[..., 6] / rot[..., 7]) + (0.5 * np.pi)
         alpha_pre = alpha1 * alpha_idx + alpha2 * (1 - alpha_idx)
         return alpha_pre.unsqueeze(-1)
+    
+    def export_get_bboxes(self, output:dict, P2, img_batch=None):
+        output['hm'] = torch.sigmoid(output['hm'])
+
+        heat = _nms(output['hm'])
+        scores, inds, clses, ys, xs = _topk(heat, K=100)
+
+        gathered_output = self._gather_output(output, inds.long(), torch.ones_like(scores).bool())
+
+        scores = scores[0] #[1, N] -> [N]
+        clses = clses[0] #[1, N] -> [N]
+        ys = ys[0] #[1, N] -> [N]
+        xs = xs[0] #[1, N] -> [N]
+
+        bbox2d = self._decode(gathered_output['bbox2d'], torch.stack([xs, ys], dim=1))
+
+        gathered_output['dim'] = self.cls_mean_size[clses.long()] * torch.exp(gathered_output['log_dim'])
+        gathered_output['depth_decoded'] = decode_depth_inv_sigmoid_calibration(gathered_output['depth'], P2[0, 0, 0], constant_scale=30.0)
+        expanded_P2 = P2[gathered_output['batch_idxs'], :, :] #[N, 4, 4]
+        gathered_output['kpd_depth'] = decode_depth_from_keypoints(gathered_output['hps'], gathered_output['dim'], expanded_P2) #[N, 3]
+        gathered_output['depth_uncer'] = torch.clamp(gathered_output['depth_uncer'], self.uncertainty_range[0], self.uncertainty_range[1])
+        gathered_output['corner_uncer'] = torch.clamp(gathered_output['corner_uncer'], self.uncertainty_range[0], self.uncertainty_range[1])
+
+        pred_combined_uncertainty = torch.cat((gathered_output['depth_uncer'], gathered_output['corner_uncer']), dim=1).exp()
+        pred_combined_depths = torch.cat((gathered_output['depth_decoded'], gathered_output['kpd_depth']), dim=1)
+        gathered_output['merged_depth'] = self.merge_depth(pred_combined_depths, pred_combined_uncertainty)
+
+        score_threshold = getattr(self.test_cfg, 'score_thr', 0.1)
+        mask = scores > score_threshold#[K]
+        bbox2d = bbox2d[mask]
+        scores = scores[mask].unsqueeze(1) #[K, 1]
+        dims   = gathered_output['dim'][mask] #[w, h, l] ?
+        cls_indexes = clses[mask].long()
+        alpha = self._decode_alpha(gathered_output['rot'][mask])
+
+        cx3d = (xs[mask] + gathered_output['offset'][mask][..., 0]).unsqueeze(-1)
+        cy3d = (ys[mask] + gathered_output['offset'][mask][..., 1]).unsqueeze(-1)
+        z3d = gathered_output['merged_depth'][mask].unsqueeze(-1)  #[N, 1]
+    
+        ## upsample back
+        bbox2d *= 4
+        cx3d *= 4
+        cy3d *= 4
+
+        center3d = self.backprojector(
+            torch.cat([cx3d, cy3d, z3d], dim=1), P2[0]
+        ) # [N, 2] [x3d, y3d]
+        theta = alpha2theta_3d(alpha, center3d[:, 0:1], center3d[:, 2:3], P2[0])
+
+        if img_batch is not None:
+            bbox2d = self.clipper(bbox2d, img_batch)
+
+        bbox3d_3d = torch.cat(
+            [bbox2d,  center3d, dims, alpha, theta], dim=1     #x3d, y3d, z, w, h, l, alpha, theta
+        )
+
+        cls_agnostic = getattr(self.test_cfg, 'cls_agnositc', True) # True -> directly NMS; False -> NMS with offsets different categories will not collide
+        nms_iou_thr  = getattr(self.test_cfg, 'nms_iou_thr', 0.5)
+        
+
+        if cls_agnostic:
+            keep_inds = nms(bbox3d_3d[:, :4], scores[:, 0], nms_iou_thr)
+        else:
+            max_coordinate = bbox3d_3d.max()
+            nms_bbox = bbox3d_3d[:, :4] + cls_indexes.float() * (max_coordinate)
+            keep_inds = nms(nms_bbox, scores, nms_iou_thr)
+            
+        scores = scores[keep_inds, 0]
+        bbox3d_3d = bbox3d_3d[keep_inds]
+        cls_indexes = cls_indexes[keep_inds]
+        return scores, bbox3d_3d, cls_indexes
 
     def get_bboxes(self, output:dict, P2, img_batch=None):
         output['hm'] = torch.sigmoid(output['hm'])
