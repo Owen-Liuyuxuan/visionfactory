@@ -5,7 +5,9 @@ import fire
 import torch
 import onnx
 import onnxruntime as ort
+import deform_conv2d_onnx_exporter
 
+deform_conv2d_onnx_exporter.register_deform_conv2d_onnx_op()
 
 from _path_init import manage_package_logging
 from vision_base.utils.builder import build
@@ -51,7 +53,7 @@ def main(config:str="config/config.py",
     dummy_image = torch.zeros([1, cfg.data.rgb_shape[2], cfg.data.rgb_shape[0], cfg.data.rgb_shape[1]]).cuda()
     dummy_P2    = torch.ones([1, 3, 4]).cuda()
     dummy_input = (dummy_image, dummy_P2)
-    torch.onnx.export(meta_arch, dummy_input, onnx_file, input_names=input_names, output_names=output_names, opset_version=11)
+    torch.onnx.export(meta_arch, dummy_input, onnx_file, input_names=input_names, output_names=output_names, opset_version=12)
     print(f"Finish export, start checking the exported file {onnx_file}.")
     
     # Load the ONNX model
