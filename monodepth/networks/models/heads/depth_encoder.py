@@ -105,8 +105,8 @@ class DepthDecoder(nn.Module):
                 outputs[('logits', i)] = outputs_logits
                 outputs[("disp", i)] = self.sigmoid(outputs_logits)
                 #outputs[("disp", i)] = self.sigmoid(self._gather_activation(self.convs[("dispconv", i)](x)))
-                _, depth = disp_to_depth(outputs[("disp", i)], self.min_depth, self.max_depth)
-                outputs[("depth", i, i)] = depth * depth_scale
+                _, depth = disp_to_depth(outputs[("disp", i)], self.min_depth * depth_scale, self.max_depth * depth_scale)
+                outputs[("depth", i, i)] = depth
 
         return outputs
 
