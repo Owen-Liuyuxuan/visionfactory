@@ -6,6 +6,7 @@ from copy import deepcopy
 
 import torch
 import torch.utils.data
+import cv2
 from torch.utils.data import Dataset, DataLoader # noqa: F401
 from monodepth.data.datasets.utils import read_image,  cam_relative_pose_nusc, read_csv
 from vision_base.utils.builder import build
@@ -88,6 +89,7 @@ class KITTI360MonoDataset(torch.utils.data.Dataset):
         super(KITTI360MonoDataset, self).__init__()
         self.raw_path = getattr(data_cfg, 'raw_path', '/data/KITTI-360')
         self.meta_file   = getattr(data_cfg, 'split_file', 'kitti360_meta.txt')
+        self.read_mask   = getattr(data_cfg, 'read_mask', False)
 
         self.img_dir   = os.path.join(self.raw_path, 'data_2d_raw')
         self.pose_dir  = os.path.join(self.raw_path, 'data_poses')
@@ -127,6 +129,7 @@ class KITTI360MonoDataset(torch.utils.data.Dataset):
             self.imdb = self._filter_indexes()
 
         self.use_right_image = getattr(data_cfg, 'use_right_image', True)
+        self.image_suffix    = getattr(data_cfg, 'image_suffix', '.png')
 
         self.transform = build(**data_cfg.augmentation)
     
@@ -165,6 +168,12 @@ class KITTI360MonoDataset(torch.utils.data.Dataset):
         self.cam_calib['T_rect02baselink'] = R0 @ T0
         self.cam_calib['T_rect12baselink'] = R1 @ T1
 
+        if self.read_mask:
+            self.masks = []
+            for i in range(2):
+                image_path = os.path.join(self.raw_path, f'mask{i:02d}.png')
+                self.masks.append(cv2.imread(image_path, -1))
+
     def _load_keypose(self):
         self.keypose = {}
         for sequence_name in self.sequence_names:
@@ -200,7 +209,7 @@ class KITTI360MonoDataset(torch.utils.data.Dataset):
         
         image_dir = os.path.join(self.img_dir, sequence_name, image_dir_name, 'data_rect')
         image_arrays = list(map(
-            read_image, [os.path.join(image_dir, f"{i:010d}.png") for i in img_indexes]
+            read_image, [os.path.join(image_dir, f"{i:010d}.{self.image_suffix}") for i in img_indexes]
         ))
         for i, frame_id in enumerate(self.frame_ids):
             data[('image', frame_id)] = image_arrays[i]
@@ -211,7 +220,13 @@ class KITTI360MonoDataset(torch.utils.data.Dataset):
         data['original_P2'] = data['P2'].copy()
 
         h, w, _ = data[("image", 0)].shape
-        data["patched_mask"] = np.ones([h, w])
+        if self.read_mask:
+            if image_dir_name == 'image_00':
+                data['patched_mask'] = self.masks[0].copy()
+            if image_dir_name == 'image_01':
+                data['patched_mask'] = self.masks[1].copy()
+        else:
+            data["patched_mask"] = np.ones([h, w])
         data['sequence_name'] = sequence_name
         data['image_index'] = img_indexes[0]
 
