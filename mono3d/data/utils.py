@@ -91,7 +91,8 @@ import json
 from typing import List
 from PIL import Image
 import numpy as np
-
+import os
+import tqdm
 
 def bbox_xyxy_to_xywh(bbox_xyxy:List[float])->List[float]:
     """
@@ -187,3 +188,105 @@ def JsonToCoCo(gt_json_file, read_image=False, image_w=None, image_h=None):
             coco_data['annotations'].append(annotation)
 
     return coco_data
+
+"""
+Labelme format:
+    An array of json files. Each json file represent annotation for one file.
+    {
+        "version": "4.0.0",
+        "flags": {},
+        "shapes": [
+            {
+                "label": "person", # type
+                "points": [
+                    x1, y1
+                ],
+                [x2, y2]
+            },
+            {
+                "group_id": null,
+                "shape_type": "rectangle",
+                flags: {},
+            }
+        ],
+        "imagePath": $path,
+        "imageData": null,
+        "imageHeight": int,
+        "imageWidth": int, 
+    }
+"""
+def JsonToLabelme(gt_json_file, labelme_dir):
+    """Converts Json file to labelme format.
+    """
+    if isinstance(gt_json_file, str):
+        with open(gt_json_file, 'r') as f:
+            gt_data = json.load(f)
+    else:
+        assert isinstance(gt_json_file, dict)
+        gt_data = gt_json_file
+    
+    images = gt_data['images']
+    annotations_set = gt_data['annotations']
+    for i in tqdm.tqdm(range(len(images))):
+        image_path = images[i]
+        annotations = annotations_set[i]
+        labelme_data = dict()
+        labelme_data['version'] = '4.0.0'
+        labelme_data['flags'] = {}
+        labelme_data['shapes'] = []
+        labelme_data['imagePath'] = image_path
+        labelme_data['imageData'] = None
+        # pil_image = Image.open(image_path)
+        # w, h = pil_image.size
+        # labelme_data['imageHeight'] = h
+        # labelme_data['imageWidth'] = w
+
+        for annotation in annotations:
+            bbox2d = annotation['bbox2d']
+            label = annotation['category_name']
+            shape = dict()
+            shape['label'] = label
+            shape['points'] = [[bbox2d[0], bbox2d[1]], [bbox2d[2], bbox2d[3]]]
+            shape['group_id'] = None
+            shape['shape_type'] = 'rectangle'
+            shape['flags'] = {}
+            labelme_data['shapes'].append(shape)
+
+        labelme_file = os.path.join(labelme_dir, os.path.basename(image_path).replace('.png', '.json'))
+        with open(labelme_file, 'w') as f:
+            json.dump(labelme_data, f, indent=4)
+
+def LabelmeToJson(labelme_dir, output_json_file, directory_remap=None):
+    labelme_json_files = os.listdir(labelme_dir)
+    labelme_json_files = [os.path.join(labelme_dir, labelme_json_file) 
+                          for labelme_json_file in labelme_json_files
+                          if labelme_json_file.endswith('.json')]
+    labelme_json_files.sort()
+    output_json = dict()
+    output_json['images'] = []
+    output_json['annotations'] = []
+    output_json['is_labeled_3d'] = False
+    output_json['total_frames'] = len(labelme_json_files)
+    output_json['calibrations'] = dict(P=np.eye(4)[0:3, 0:4].reshape(-1).tolist())
+    labeled_objects = set()
+    for labelme_js in labelme_json_files:
+        with open(labelme_js, 'r') as f:
+            labelme_data = json.load(f)
+        image_path = labelme_data['imagePath']
+        if directory_remap is not None:
+            image_path = os.path.join(directory_remap, os.path.basename(image_path))
+        output_json['images'].append(image_path)
+        annotations = []
+        for shape in labelme_data['shapes']:
+            label = shape['label']
+            labeled_objects.add(label)
+            bbox2d = shape['points']
+            annotation = dict()
+            annotation['bbox2d'] = [bbox2d[0][0], bbox2d[0][1], bbox2d[1][0], bbox2d[1][1]]
+            annotation['category_name'] = label
+            annotations.append(annotation)
+        output_json['annotations'].append(annotations)
+    output_json['labeled_objects'] = list(labeled_objects)
+    with open(output_json_file, 'w') as f:
+        json.dump(output_json, f, indent=4)
+

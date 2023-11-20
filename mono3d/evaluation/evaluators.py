@@ -170,6 +170,7 @@ class Object3DKittiMetricEvaluateHook(BaseEvaluationHook):
                 result_path_split='test'):
         self.test_hook = build(**test_run_hook_cfg)
         self.gt_json_file = gt_json_file
+        self.result_path_split = result_path_split
         with open(gt_json_file, 'r') as f:
             gt_file_obj = json.load(f)
         if split_file is not None:
@@ -241,9 +242,9 @@ class Object3DKittiMetricEvaluateHook(BaseEvaluationHook):
             collated_data:Dict = collate_fn([data])
 
             output_dict = self.test_hook(collated_data, meta_arch, global_step, epoch_num)
-            original_bboxes = output_dict['original_bboxes'].cpu().numpy() # [N, 11] #xyxy, x3d, y3d, z, w, h, l, alpha, theta
+            original_bboxes = output_dict['original_bboxes'].cpu().numpy().astype(np.float64) # [N, 11] #xyxy, x3d, y3d, z, w, h, l, alpha, theta
 
-            scores = output_dict['scores'].cpu().numpy() # Array [N]
+            scores = output_dict['scores'].cpu().numpy().astype(np.float64) # Array [N]
             bbox2d = original_bboxes[:, 0:4] # Array [N, 4] [x1, y1, x2, y2]
             xyz = original_bboxes[:, 4:7] # Array [N, 3] [x, y, z]
             whl = original_bboxes[:, 7:10] # Array [N, 3] [w, h, l]
@@ -261,10 +262,23 @@ class Object3DKittiMetricEvaluateHook(BaseEvaluationHook):
                     category_name = cls_names[i], score = scores[i]
                 ))
             predictions['annotations'].append(frame_annotations)
-
-        kitti_pred_anno = Json2annotation(predictions)
-        result_texts = self._evaluate(kitti_pred_anno)
-        for class_index, result_text in enumerate(result_texts):
-            if writer is not None:
-                writer.add_text("validation result {}".format(class_index), result_text.replace(' ', '&nbsp;').replace('\n', '  \n'), epoch_num + 1)
-            print(result_text)
+        
+        if self.result_path_split == 'test':
+            predictions['images'] = []
+            with open('test.json', 'w') as f:
+                for i in range(len(predictions['annotations'])):
+                    for j in range(len(predictions['annotations'][i])):
+                        predictions['annotations'][i][j]['whl'] = list(predictions['annotations'][i][j]['whl'])
+                        predictions['annotations'][i][j]['xyz'] = list(predictions['annotations'][i][j]['xyz'])
+                        predictions['annotations'][i][j]['bbox2d'] = list(predictions['annotations'][i][j]['bbox2d'])
+                        predictions['annotations'][i][j]['bbox2d'] = list(predictions['annotations'][i][j]['bbox2d'])
+                    predictions['images'].append(f"{i:06d}.png")
+                json.dump(predictions, f)
+            return
+        else:
+            kitti_pred_anno = Json2annotation(predictions)
+            result_texts = self._evaluate(kitti_pred_anno)            
+            for class_index, result_text in enumerate(result_texts):
+                if writer is not None:
+                    writer.add_text("validation result {}".format(class_index), result_text.replace(' ', '&nbsp;').replace('\n', '  \n'), epoch_num + 1)
+                print(result_text)
