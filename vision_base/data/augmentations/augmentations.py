@@ -508,6 +508,37 @@ class RandomWarpAffine(object):
 
         return data
 
+class RandomDistortion(object):
+    """
+    Randomly apply Camera distortion to an image given a distortion probability.
+    """
+    def __init__(self, distort_prob, image_keys=['image'], calib_keys=[], distortion_base_strength=3.0,
+                 gt_image_keys=[], random_seed=None, **kwargs):
+        self.distort_prob = distort_prob
+        self.image_keys = image_keys
+        self.calib_keys = calib_keys
+        self.gt_image_keys = gt_image_keys
+        self.distort_base = distortion_base_strength
+        self.rng = np.random.default_rng(random_seed if random_seed is not None else np.random.randint(0, 2**32))
+    
+    def __call__(self, data):
+        if self.rng.random() <= self.distort_prob:
+            
+            D = self.rng.normal(0, 1, 4) * np.array([(self.distort_base * 0.1)**i for i in range(4)])
+            for key in (self.image_keys + self.gt_image_keys):
+                original_image = data[key]
+                if len(self.calib_keys):
+                    K = data[self.calib_keys[0]][0:3, 0:3]
+                else:
+                    h, w = original_image.shape[:2]
+                    K = np.array([[w, 0, w/2],
+                              [0, w, h/2],
+                              [0, 0, 1]], dtype=np.float32)
+                mapx, mapy = cv2.initUndistortRectifyMap(K, D, None, K, (w, h), 5)
+                data[key] = cv2.remap(original_image, mapx, mapy, cv2.INTER_NEAREST)
+        
+        return data
+
 class RandomHue(object):
     """
     Randomly adjust the hue of an image given a delta degree to rotate by,
