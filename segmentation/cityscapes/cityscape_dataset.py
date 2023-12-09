@@ -9,6 +9,7 @@ if __name__ == "__main__":
     sys.path.append(os.getcwd())
 from vision_base.data.datasets.utils import read_image
 from vision_base.utils.builder import build
+from segmentation.cityscapes.cityscape_labels import labels as cityscape_labels
 
 def read_split_file(file_path, sample_over=1):
     file_name = os.path.basename(file_path)
@@ -41,6 +42,7 @@ class CityscapeDataset(Dataset):
         self.meta_file   = getattr(data_cfg, 'split_file', '/data/cityscapes/train.txt')
         self.imdb = read_split_file(self.meta_file, self.sample_over)
         self.transform = build(**data_cfg.augmentation)
+        self.label_text_set = [label.name for label in cityscape_labels[:-1]]
     
     def __len__(self):
         return len(self.imdb)
@@ -51,6 +53,7 @@ class CityscapeDataset(Dataset):
         data['image'] = read_image(os.path.join(self.base_path, obj['image_path']))
         data['gt_image'] = read_image(os.path.join(self.base_path, obj['gt_path']))
         data['original_shape'] = data['image'].shape
+        data['label_sets'] = self.label_text_set
         data = self.transform(deepcopy(data))
         return data
 

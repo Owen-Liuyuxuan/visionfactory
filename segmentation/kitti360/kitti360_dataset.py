@@ -4,6 +4,7 @@ from easydict import EasyDict
 from copy import deepcopy
 
 from torch.utils.data import Dataset # noqa: F401
+from segmentation.evaluation.labels import labels as kitti360_labels
 from vision_base.data.datasets.utils import read_image
 from vision_base.utils.builder import build
 
@@ -30,6 +31,7 @@ class KITTI360SegDataset(Dataset):
         self.imdb = read_split_file(self.meta_file, self.sample_over)
 
         self.transform = build(**data_cfg.augmentation)
+        self.label_text_set = [label.name for label in kitti360_labels[:-1]]
     
     def __len__(self):
         return len(self.imdb)
@@ -40,5 +42,6 @@ class KITTI360SegDataset(Dataset):
         data['image'] = read_image(os.path.join(self.base_path, obj['image_path']))
         data['gt_image'] = read_image(os.path.join(self.base_path, obj['gt_path']))
         data['original_shape'] = data['image'].shape
+        data['label_sets'] = self.label_text_set
         data = self.transform(deepcopy(data))
         return data
