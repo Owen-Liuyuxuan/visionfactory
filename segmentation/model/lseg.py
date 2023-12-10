@@ -35,6 +35,8 @@ class LanguageSeg(BaseMetaArch):
         base_clip_model = getattr(network_cfg, 'base_clip_model', 'RN50')
         self.max_label_set = getattr(network_cfg, 'max_label_set', 80)
         self.clip_model, self.output_features = load_clip_model(base_clip_model)
+        for param in self.clip_model.parameters():
+            param.requires_grad=False
         self.core = build(**network_cfg)
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07)).exp()
         self.loss = MultiScaleCrossEntropyLoss(ignore_index=0, reduction='none')
@@ -53,6 +55,9 @@ class LanguageSeg(BaseMetaArch):
             mask[i, :len(label_set)] = True
         return text_features, mask
     
+    def train(self, mode=True):
+        super(LanguageSeg, self).train(mode)
+        self.clip_model.eval()
 
     def forward_train(self, data, meta):
         """
