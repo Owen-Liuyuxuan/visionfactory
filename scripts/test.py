@@ -40,7 +40,7 @@ def main(config:str="config/config.py",
     meta_arch.eval()
 
     if 'evaluate_hook' in cfg.trainer:
-        evaluate_hook = build(result_path_split='validation', **cfg.trainer.evaluate_hook)
+        evaluate_hook = build(result_path_split=split_to_test, **cfg.trainer.evaluate_hook)
         print("Found evaluate function")
     else:
         raise KeyError("evaluate_hook not found in Config")

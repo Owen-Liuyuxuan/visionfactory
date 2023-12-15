@@ -53,7 +53,8 @@ def main(config:str="config/config.py",
     dummy_image = torch.zeros([1, cfg.data.rgb_shape[2], cfg.data.rgb_shape[0], cfg.data.rgb_shape[1]]).cuda()
     dummy_P2    = torch.ones([1, 3, 4]).cuda()
     dummy_input = (dummy_image, dummy_P2)
-    torch.onnx.export(meta_arch, dummy_input, onnx_file, input_names=input_names, output_names=output_names, opset_version=12)
+    torch.onnx.export(meta_arch, dummy_input, onnx_file, input_names=input_names, output_names=output_names, opset_version=9,
+                      dynamic_axes={'image': {0: 'batch_size'}, 'P2': {0: 'batch_size'}})
     print(f"Finish export, start checking the exported file {onnx_file}.")
     
     # Load the ONNX model

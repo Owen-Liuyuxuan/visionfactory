@@ -231,6 +231,7 @@ class BiSeNetV1(nn.Module):
                  out_indices=(0, 1, 2),
                  align_corners=False,
                  out_channels=256, output_num_classes=45,
+                 upsample_on=True,
                  *args, **kwargs):
 
         super().__init__()
@@ -248,15 +249,15 @@ class BiSeNetV1(nn.Module):
         self.ffm = FeatureFusionModule(context_channels[1], out_channels)
         self.outConv = nn.Sequential(
             nn.Conv2d(out_channels, output_num_classes, kernel_size=1),
-            nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True)
+            nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True) if upsample_on else nn.Identity()
         )
         self.context_8_conv = nn.Sequential(
             nn.Conv2d(context_channels[0], output_num_classes, kernel_size=1),
-            nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True)
+            nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True) if upsample_on else nn.Identity()
         )
         self.context_16_conv = nn.Sequential(
             nn.Conv2d(context_channels[0], output_num_classes, kernel_size=1),
-            nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)
+            nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True) if upsample_on else nn.Identity()
         )
 
     def forward(self, x):
