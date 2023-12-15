@@ -36,8 +36,6 @@ def read_P01_from_sequence(file):
                 data = line.strip().split(" ")
                 R = np.array([float(x) for x in data[1:10]])
                 R1[0:3, 0:3] = np.reshape(R, [3, 3])
-    assert P0 is not None, "can not find P0 in file {}".format(file)
-    assert P1 is not None, "can not find P1 in file {}".format(file)
     return P0, P1, R0, R1
 
 def read_extrinsic_from_sequence(file):
@@ -129,7 +127,7 @@ class KITTI360MonoDataset(torch.utils.data.Dataset):
             self.imdb = self._filter_indexes()
 
         self.use_right_image = getattr(data_cfg, 'use_right_image', True)
-        self.image_suffix    = getattr(data_cfg, 'image_suffix', '.png')
+        self.image_suffix    = getattr(data_cfg, 'image_suffix', 'png')
 
         self.transform = build(**data_cfg.augmentation)
     
@@ -227,6 +225,64 @@ class KITTI360MonoDataset(torch.utils.data.Dataset):
                 data['patched_mask'] = self.masks[1].copy()
         else:
             data["patched_mask"] = np.ones([h, w])
+        data['sequence_name'] = sequence_name
+        data['image_index'] = img_indexes[0]
+
+        data = self.transform(deepcopy(data))
+        return data
+
+class OdaibaKITTI360Dataset(KITTI360MonoDataset):
+
+    def _load_calib(self):
+        cam_calib_file = os.path.join(self.calib_dir, "perspective.txt")
+        cam_extrinsic_file = os.path.join(self.calib_dir, "calib_cam_to_pose.txt")
+
+        P0, P1, R0, R1 = read_P01_from_sequence(cam_calib_file)
+        T0, T1 = read_extrinsic_from_sequence(cam_extrinsic_file)
+        self.cam_calib = dict()
+        self.cam_calib['P0'] = P0
+        self.cam_calib['T_rect02baselink'] = R0 @ T0
+
+        mask_path = os.path.join(self.raw_path, f"mask.png")
+        if os.path.exists(mask_path):
+            self.mask = cv2.imread(mask_path, -1)
+        else:
+            self.mask = None
+
+    def __getitem__(self, index):
+        obj = self.imdb[index]
+        sequence_name = obj['sequence_name']
+        pose_indexes = obj['pose_indexes']
+        img_indexes = obj['img_indexes']
+        extrinsics = self.cam_calib['T_rect02baselink']
+        image_dir_name = 'image_00'
+        P2 = self.cam_calib['P0']
+
+        
+        data = dict()
+        poses = self.keypose[sequence_name][pose_indexes] #[3, 4, 4]
+        for i, idx in enumerate(self.frame_ids[1:]):
+            data[('relative_pose', idx)] = cam_relative_pose_nusc(
+               poses[0], poses[i+1], np.linalg.inv(extrinsics)
+            ).astype(np.float32)
+        
+        image_dir = os.path.join(self.img_dir, sequence_name, image_dir_name)
+        image_arrays = list(map(
+            read_image, [os.path.join(image_dir, f"{i:010d}.{self.image_suffix}") for i in img_indexes]
+        ))
+        for i, frame_id in enumerate(self.frame_ids):
+            data[('image', frame_id)] = image_arrays[i]
+            data[('original_image', frame_id)] = data[('image', frame_id)].copy()
+
+        data['P2'] = np.zeros((3, 4), dtype=np.float32)
+        data['P2'][0:3, 0:3] = P2[0:3, 0:3]
+        data['original_P2'] = data['P2'].copy()
+
+        h, w, _ = data[("image", 0)].shape
+        if self.mask is None:
+            data['patched_mask'] = np.ones([h, w])
+        else:
+            data['patched_mask'] = self.mask.copy()
         data['sequence_name'] = sequence_name
         data['image_index'] = img_indexes[0]
 
