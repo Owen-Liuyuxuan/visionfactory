@@ -16,6 +16,27 @@ The general starting points/runtime backbone will be in the "scripts", common mo
 
 In this main page, we will focus on the general usage of vision_base.
 
+## (New) Launching Web Demo
+
+We introduced ways to demonstrate the result of the pretrained ONNX models. (So that we could check results with any data at hand)
+
+The onnxmodels are created with the export scripts. And we provide pretrained models in [release page of inference](https://github.com/Owen-Liuyuxuan/ros2_vision_inference/releases).
+
+Install `streamlit` and run the following command from the base directory:
+```
+python3 -m streamlit run demos/web_demo.py --server.fileWatcherType none
+```
+
+![Alt text](docs/web_demo_image.png)
+
+We could upload any images and check the visualized results. If we do not indicate the camera parameters, the web-page will make a pseudo camera parameter for the demo usage.
+
+The pretrained model is trained on road scenes so we could expect the potential and limitation of the models.
+
+## Launching ROS Demo
+
+
+
 ## Pre-Use
 
 We recommend torch > 1.10 or torch 2.0 with the corresponding CUDA versions. run 

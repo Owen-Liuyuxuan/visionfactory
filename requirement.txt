@@ -12,3 +12,6 @@ tqdm
 numba
 scikit-image
 pycocotools
+pyplot
+streamlit
+onnxruntime-gpu
