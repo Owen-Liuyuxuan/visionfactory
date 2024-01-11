@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from easydict import EasyDict
 import json
+import os
 from typing import List, Dict
 
 from copy import deepcopy
@@ -36,6 +37,7 @@ class JsonMonoDataset(torch.utils.data.Dataset):
         self.dataset_base = json.load(
             open(json_path, 'r')
         )
+        self.base_directory = self.dataset_base['base_directory'] if 'base_directory' in self.dataset_base else ''
         self.labeled_objects = self.dataset_base['labeled_objects']
         self.is_labeled_3d = np.array(self.dataset_base['is_labeled_3d'])
         self.split_file = getattr(data_cfg, 'split_file', None)
@@ -102,6 +104,9 @@ class JsonMonoDataset(torch.utils.data.Dataset):
             dict: label dicts
         """
         num_objects = len(transformed_label)
+        if num_objects > self.max_objects:
+            transformed_label = transformed_label[:self.max_objects]
+            num_objects = self.max_objects
         hm_h, hm_w = image.shape[1] // scale, image.shape[2] // scale
 
         # setup empty targets
@@ -283,7 +288,7 @@ class JsonMonoDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         data = dict()
         
-        data['image'] = read_image(self.images[index])
+        data['image'] = read_image(os.path.join(self.base_directory, self.images[index]))
         data['objs_list'] = deepcopy(self.annotatations[index])
         calibration = self.calibs[index]
         data['P'] = deepcopy(
@@ -304,6 +309,9 @@ class Json2DDataset(JsonMonoDataset):
         """Encode Targets for MonoFlex. Make a Pseudo one that only deal with 2D data
         """
         num_objects = len(transformed_label)
+        if num_objects > self.max_objects:
+            transformed_label = transformed_label[:self.max_objects]
+            num_objects = self.max_objects
         hm_h, hm_w = image.shape[1] // scale, image.shape[2] // scale
 
         # setup empty targets
@@ -417,7 +425,11 @@ class Json2DDataset(JsonMonoDataset):
     def __getitem__(self, index):
         data = dict()
         
-        data['image'] = read_image(self.images[index])
+        data['image'] = read_image(os.path.join(self.base_directory, self.images[index]))
+        if data['image'].shape[-1] == 1:
+            data['image'] = np.repeat(data['image'], 3, axis=-1)
+        if len(data['image'].shape) == 2:
+            data['image'] = np.repeat(data['image'][..., np.newaxis], 3, axis=-1)
         data['objs_list'] = deepcopy(self.annotatations[index])
         calibration = self.calibs[index]
         data['P'] = deepcopy(
@@ -440,6 +452,7 @@ class JsonTestDataset(torch.utils.data.Dataset):
         self.dataset_base = json.load(
             open(json_path, 'r')
         )
+        self.base_directory = self.dataset_base['base_directory'] if 'base_directory' in self.dataset_base else ''
         self.split_file = getattr(data_cfg, 'split_file', None)
         if self.split_file is not None:
             self.dataset_base = select_by_split_file(self.dataset_base, self.split_file)
@@ -456,7 +469,7 @@ class JsonTestDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         data = dict()
         
-        data['image'] = read_image(self.images[index])
+        data['image'] = read_image(os.path.join(self.base_directory, self.images[index]))
         calibration = self.calibs[index]
         data['P'] = deepcopy(
             np.array(calibration[self.main_calibration_key])).reshape(3, 4)

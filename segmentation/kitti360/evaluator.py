@@ -2,6 +2,7 @@ import os
 import shutil
 import cv2
 import numpy as np
+import json
 from torch.utils.tensorboard import SummaryWriter
 from vision_base.evaluation.base_evaluator import BaseEvaluator
 from segmentation.evaluation.evalPixelLevelSemanticLabeling import evaluateImgLists, config
@@ -31,7 +32,8 @@ class KITTI360Evaluator(BaseEvaluator):
     def step(self, index, output_dict, data):
         pred_path = os.path.join(self.result_path, 'pred_{:010d}.png'.format(index))
         h, w, _ = data['original_shape']
-        seg_result = output_dict['pred_seg'][0].cpu().numpy().astype(np.uint16)
+        h_eff, w_eff = data[('image_resize', 'effective_size')]
+        seg_result = output_dict['pred_seg'][0, 0:h_eff, 0:w_eff].cpu().numpy().astype(np.uint16)
         seg_result = cv2.resize(seg_result, (w, h), interpolation=cv2.INTER_NEAREST)
         cv2.imwrite(pred_path, seg_result)
         self.pred_lists.append(pred_path)
@@ -42,3 +44,10 @@ class KITTI360Evaluator(BaseEvaluator):
             import pprint
             formatted_cfg = pprint.pformat(result_dict)
             writer.add_text("evaluation", formatted_cfg.replace(' ', '&nbsp;').replace('\n', '  \n'), global_step=epoch_num)
+
+class JsonEvaluator(KITTI360Evaluator):
+    def __init__(self, json_data_path, result_path, sample_over=1):
+        self.imdb = json.load(open(json_data_path, 'r'))
+        self.gt_image_lists = [obj for obj in self.imdb['labels']]
+        self.pred_lists = []
+        self.result_path = result_path

@@ -267,7 +267,7 @@ def LabelmeToJson(labelme_dir, output_json_file, directory_remap=None):
     output_json['annotations'] = []
     output_json['is_labeled_3d'] = False
     output_json['total_frames'] = len(labelme_json_files)
-    output_json['calibrations'] = dict(P=np.eye(4)[0:3, 0:4].reshape(-1).tolist())
+    output_json['calibrations'] = [dict(P=np.eye(4)[0:3, 0:4].reshape(-1).tolist()) for _ in range(len(labelme_json_files))]
     labeled_objects = set()
     for labelme_js in labelme_json_files:
         with open(labelme_js, 'r') as f:
@@ -284,6 +284,7 @@ def LabelmeToJson(labelme_dir, output_json_file, directory_remap=None):
             annotation = dict()
             annotation['bbox2d'] = [bbox2d[0][0], bbox2d[0][1], bbox2d[1][0], bbox2d[1][1]]
             annotation['category_name'] = label
+            annotation['visibility_level'] = 0
             annotations.append(annotation)
         output_json['annotations'].append(annotations)
     output_json['labeled_objects'] = list(labeled_objects)

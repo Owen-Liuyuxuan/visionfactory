@@ -70,11 +70,15 @@ class MonoFlexHead(nn.Module):
         self.empirical_whl = json.load(
             open(data3d_json, 'r')
         )
+        cls_mean_size = np.ones([len(self.learned_classes), 3]) * 1e4
+        for i, class_name in enumerate(self.learned_classes):
+            if class_name in self.empirical_whl:
+                cls_mean_size[i] = self.empirical_whl[class_name]['whl']
         self.register_buffer('cls_mean_size', torch.from_numpy(
             np.array(
-                [self.empirical_whl[class_name]['whl'] for class_name in self.learned_classes], dtype=np.float32
-            ))
-        )
+               cls_mean_size, dtype=np.float32
+            )
+        ))
     
     @staticmethod
     def _neg_loss(pred, gt):
