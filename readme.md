@@ -35,7 +35,7 @@ The pretrained model is trained on road scenes so we could expect the potential 
 
 ## Launching ROS Demo
 
-
+Check [this repo](https://github.com/Owen-Liuyuxuan/ros2_vision_inference) for launching inference demo in ROS1/ROS2.
 
 ## Pre-Use
 
