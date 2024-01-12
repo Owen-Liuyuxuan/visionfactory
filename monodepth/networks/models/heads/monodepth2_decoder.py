@@ -431,6 +431,5 @@ class FishEyeDecoder(MonoDepth2Decoder):
         norm = output_dict[("depth", 0, 0)]
         P = input_dict["P2"]
         calib_meta = input_dict["calib_meta"][0]
-        print(input_dict.keys())
         points, mask = self.project_dict[input_dict['model_type'][0]].image2cam(norm, P, [calib_meta])
         return dict(depth= points[..., 2], norm=norm)

@@ -7,12 +7,29 @@ from collections import Counter
 from .kitti_unsupervised_eval import KittiEigenEvaluator
 from monodepth.networks.utils.monodepth_utils import compute_errors, sub2ind
 from monodepth.data.datasets.utils import read_pc_from_bin
+from monodepth.data.datasets.utils import read_csv
 from monodepth.data.datasets.fisheye_dataset import read_fisheycalib, read_cam2velo_from_sequence
 from monodepth.data.datasets.fisheye_dataset import read_extrinsic_from_sequence as read_fisheye_extrinsic, extract_P_from_fisheye_calib
 from monodepth.networks.utils.mei_fisheye_utils import MeiCameraProjection
 
 
 class Kitti360FisheyeEvaluator(KittiEigenEvaluator):
+    def __init__(self,
+                 data_path, #path to kitti raw data
+                 split_file,
+                 gt_saved_file,
+                 is_evaluate_absolute=False,
+                 ):
+        self.is_evaluate_absolute = is_evaluate_absolute
+
+        if os.path.isfile(gt_saved_file):
+            self.gt_depths = np.load(gt_saved_file, fix_imports=True,encoding='latin1', allow_pickle=True)["data"]
+            self.close_masks = np.load(gt_saved_file, fix_imports=True,encoding='latin1', allow_pickle=True)["close_masks"]
+        
+        else:
+            print(f"Start exporting ground truth depths specified by {split_file} to {gt_saved_file}")
+            self._precompute(data_path, split_file, gt_saved_file)
+
     def _load_calib(self, calib_dir):
         left_calib_file = os.path.join(calib_dir, "image_02.yaml")
         right_calib_file = os.path.join(calib_dir, "image_03.yaml")
@@ -100,22 +117,17 @@ class Kitti360FisheyeEvaluator(KittiEigenEvaluator):
         pc_dir    = os.path.join(data_path, 'data_3d_raw')
         self._load_calib(calib_dir)
 
-        with open(split_file, 'r' ) as f:
-            lines = f.readlines()
-        
         T_cam002pose = self.cam_calib['T_image2pose']['T_image0']
         T_cam022pose = self.cam_calib['T_image2pose']['T_image2']
         T_velo2cam02 = T_velo2cam02 = np.linalg.inv(T_cam022pose) @ T_cam002pose @ np.linalg.inv(self.cam_calib['T_cam2velo'])
 
         gt_depths = []
         masks = []
-        for line in tqdm.tqdm(lines, dynamic_ncols=True):
-            sequence_name, pose_index, img_index, former_index, latter_index = line.strip().split(',')
-            pose_index = int(pose_index)
-            img_index = int(img_index)
-            former_index = int(former_index)
-            latter_index = int(latter_index)
-            frame_id = int(img_index)
+
+        header, data = read_csv(split_file)
+        for data_cell in tqdm.tqdm(data, dynamic_ncols=True):
+            sequence_name = data_cell['sequence_name']
+            frame_id = int(data_cell['0'])
 
             velo_filename = os.path.join(pc_dir, sequence_name,"velodyne_points/data", "{:010d}.bin".format(frame_id))
             velo = read_pc_from_bin(velo_filename)

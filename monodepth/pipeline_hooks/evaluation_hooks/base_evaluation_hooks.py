@@ -54,7 +54,9 @@ class KittiEvaluationHook(BaseEvaluationHook):
                 depth =output_dict["depth"][i, 0]
                 h_eff, w_eff = batched_data[('image_resize', 'effective_size')][i]
                 depth = depth[0:h_eff, 0:w_eff]
-                h, w, _ = batched_data[('original_image', 0)][i].shape
+                h, w = batched_data[('image_resize', 'original_shape')][i]
+                h = h.item()
+                w = w.item()
                 depth_0 = 1 / cv2.resize(1 / depth.cpu().numpy(), (w, h))
 
                 return_dict = self.dataset_eval_func.single_call(depth_0, frame_index)

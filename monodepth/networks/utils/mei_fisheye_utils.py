@@ -134,6 +134,8 @@ class MeiCameraProjection(object):
 
     def cam2image(self, points, P, calib):
         x, y, z = _cam2image(points, P, calib)
+        if isinstance(points, np.ndarray):
+            return np.stack([x, y, z], axis=-1)
         return torch.stack([x, y, z], dim=-1)
 
     def image2cam(self, norm, P, calib):
