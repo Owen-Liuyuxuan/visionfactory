@@ -7,6 +7,11 @@ import shutil
 import importlib
 import random
 from easydict import EasyDict
+try:
+    from torch import _assert as torch_assert
+except ImportError:
+    def torch_assert(condition: bool, message: str):
+        assert condition, message
 
 
 def get_num_parameters(model):
