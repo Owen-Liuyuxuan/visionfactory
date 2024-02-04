@@ -38,9 +38,6 @@ class VimSeg(nn.Module):
 
     def __init__(self,
                  backbone_cfg,
-                 in_channels=3,
-                 out_indices=(0, 1, 2),
-                 align_corners=False,
                  out_channels=256, output_num_classes=45,
                  *args, **kwargs):
 
@@ -53,7 +50,9 @@ class VimSeg(nn.Module):
 
     def forward(self, x):
         # stole refactoring code from Coin Cheung, thanks
-        x = self.backbone(x)
+        b, _, H, W = x.shape
+        x = self.backbone(x, return_features=True)
+        x = x.reshape(b, H//16, W//16, -1).permute(0, 3, 1, 2).contiguous()
         feat_1 = self.outConv(x)
         return dict(scale_1=feat_1)
 
