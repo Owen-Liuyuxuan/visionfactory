@@ -55,7 +55,7 @@ def euler_from_quaternion(x, y, z, w):
 
     return roll_x, pitch_y, yaw_z # in radians
 
-def main(ONCE_base_dir, json_path):
+def main(ONCE_base_dir, json_path, rectified_output_dict="/data/rectified_once"):
     main_object = {}
     main_object['labeled_objects'] = LABELED_OBJECTS
     main_object['images'] = []
@@ -86,24 +86,24 @@ def main(ONCE_base_dir, json_path):
             if 'annos' not in frame:
                 continue
             for cam in CAMS:
-                # image = cv2.imread(os.path.join(
-                #         train_data_base_dir, frame['sequence_id'], cam, f"{frame['frame_id']}.jpg"
-                #     ))
+                image = cv2.imread(os.path.join(
+                        train_data_base_dir, frame['sequence_id'], cam, f"{frame['frame_id']}.jpg"
+                    ))
                 cam_calib = calib_dict[cam]
-                # h, w = image.shape[:2]
-                h, w = 1020, 1920
+                h, w = image.shape[:2]
+                # h, w = 1020, 1920
                 P = np.array(cam_calib['P'])
                 new_cam_intrinsic, _ = cv2.getOptimalNewCameraMatrix(P,
                                                 np.array(cam_calib['distortion']),
                                                 (w, h), alpha=0.0, newImgSize=(w, h))
-                # image = cv2.undistort(image, P,
-                #                                 np.array(cam_calib['distortion']),
-                #                                 newCameraMatrix=new_cam_intrinsic)
-                target_dir = os.path.join('/home/rectified_once/', frame['sequence_id'], cam)
-                # os.makedirs(target_dir, exist_ok=True)
-                # cv2.imwrite(
-                #      os.path.join(target_dir, f"{frame['frame_id']}.jpg"), image
-                # )
+                image = cv2.undistort(image, P,
+                                                np.array(cam_calib['distortion']),
+                                                newCameraMatrix=new_cam_intrinsic)
+                target_dir = os.path.join(rectified_output_dict, frame['sequence_id'], cam)
+                os.makedirs(target_dir, exist_ok=True)
+                cv2.imwrite(
+                     os.path.join(target_dir, f"{frame['frame_id']}.jpg"), image
+                )
 
                 main_object['images'].append(
                     os.path.join(target_dir, f"{frame['frame_id']}.jpg")
@@ -175,4 +175,5 @@ if __name__ == '__main__':
     #kitti_obj_dir = '/data/kitti_obj'
     base_dir = '/data/ONCE'
     json_path = 'once_object.json'
-    main(base_dir, json_path)
+    rectified_output_dict = '/data/recitified_once'
+    main(base_dir, json_path, rectified_output_dict)

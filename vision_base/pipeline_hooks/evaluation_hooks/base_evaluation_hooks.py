@@ -11,7 +11,7 @@ from vision_base.pipeline_hooks.train_val_hooks.base_validation_hooks import Bas
 
 class BaseEvaluationHook(object):
     """
-        Base Evaluation hook functions do not have input but no output. It is responsible of running evaluation pipelines
+        Base Evaluation hook functions do not have input nor output. It is responsible of running evaluation pipelines
         But they can have initialization parameters.
     """
     def __init__(self,

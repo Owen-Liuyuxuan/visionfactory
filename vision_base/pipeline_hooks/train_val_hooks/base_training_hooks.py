@@ -8,7 +8,7 @@ from vision_base.utils.logger import LossLogger
 from vision_base.utils.timer import profile
 class BaseTrainingHook(object):
     """
-        Base Training hook functions do not have input but no output. It is responsible of running training pipelines
+        Base Training hook functions do not have input nor output. It is responsible of running training pipelines
         But they can have initialization parameters.
     """
     def __init__(self,
