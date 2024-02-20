@@ -183,10 +183,10 @@ class JsonMonoDataset(torch.utils.data.Dataset):
                 keypoints_z_visible = (abs_corner[k, 0:10, 2].numpy() > 0)
                 keypoints_visible   = keypoints_x_visible & keypoints_y_visible & keypoints_z_visible
                 keypoints_visible = np.append(
-                    np.tile(keypoints_visible[:4] | keypoints_visible[4:8], 2), np.tile(keypoints_visible[8] | keypoints_visible[9], 2)
+                    keypoints_visible[:8] | keypoints_visible[[7,2,1,4,3,6,5,0]], np.tile(keypoints_visible[8] | keypoints_visible[9], 2)
                 ) # "modified keypoint visible from monoflex"
                 keypoints_depth_valid = np.stack(
-                    (keypoints_visible[[8, 9]].all(), keypoints_visible[[0, 2, 4, 6]].all(), keypoints_visible[[1, 3, 5, 7]].all())
+                    (keypoints_visible[[8, 9]].all(), keypoints_visible[[0, 3, 4, 7]].all(), keypoints_visible[[1, 2, 5, 6]].all())
                 ).astype(np.float32)
                 keypoints_visible = keypoints_visible.astype(np.float32)
 
