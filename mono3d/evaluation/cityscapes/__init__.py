@@ -1,0 +1,1 @@
+from mono3d.evaluation.cityscapes.evaluate_cityscapes import CityScapesObjEvaluationHook
