@@ -129,36 +129,6 @@ class MonoDepth2Decoder(nn.Module):
 
         return reprojection_loss
 
-    def compute_depth_losses(self, inputs, outputs, losses):
-        """Compute depth metrics, to allow monitoring during training
-
-        This isn't particularly accurate as it averages over the entire batch,
-        so is only used to give an indication of validation performance
-        """
-        depth_pred = outputs[("depth", 0, 0)]
-        depth_pred = torch.clamp(F.interpolate(
-            depth_pred, [375, 1242], mode="bilinear", align_corners=False), 1e-3, 80)
-        depth_pred = depth_pred.detach()
-
-        depth_gt = inputs["depth_gt"]
-        mask = depth_gt > 0
-
-        # garg/eigen crop
-        crop_mask = torch.zeros_like(mask)
-        crop_mask[:, :, 153:371, 44:1197] = 1
-        mask = mask * crop_mask
-
-        depth_gt = depth_gt[mask]
-        depth_pred = depth_pred[mask]
-        depth_pred *= torch.median(depth_gt) / torch.median(depth_pred)
-
-        depth_pred = torch.clamp(depth_pred, min=1e-3, max=80)
-
-        depth_errors = compute_depth_errors(depth_gt, depth_pred)
-
-        for i, metric in enumerate(self.depth_metric_names):
-            losses[metric] = np.array(depth_errors[i].cpu())
-
     def get_prediction(self, input_dict, output_dict):
         return dict(depth= output_dict[("depth", 0, 0)])
 
@@ -296,7 +266,7 @@ class MonoDepth2Decoder(nn.Module):
 
             mean_disp = disp.mean(2, True).mean(3, True)
             norm_disp = disp / (mean_disp + 1e-7)
-            smooth_loss = get_smooth_loss(norm_disp, color) * 1e-5 / (2 ** scale)
+            smooth_loss = get_smooth_loss(norm_disp, color) * 1e-3 / (2 ** scale)
             losses[f'smooth_loss/{scale}'] = smooth_loss.detach()
 
             loss += smooth_loss

@@ -60,7 +60,7 @@ class DepthDecoder(nn.Module):
 
         for s in self.scales:
             self.convs[("dispconv", s)] = nn.Conv2d(self.num_ch_dec[s], self.num_output_channels, kernel_size=3, padding=1, padding_mode='replicate')
-            #nn.init.constant_(self.convs[('dispconv', s)].bias, -6)
+            nn.init.constant_(self.convs[('dispconv', s)].bias, -3)
 
         self.decoder = nn.ModuleList(list(self.convs.values()))
         self.sigmoid = nn.Sigmoid()

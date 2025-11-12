@@ -43,7 +43,7 @@ def draw_rect(event, x, y, flags, param):
         last_mask = mask.copy()
         if np.linalg.norm(displacement) < radius:
             center = np.array([x, y])
-            cv2.circle(mask, tuple(center.astype(np.int)), radius, 0, -1)
+            cv2.circle(mask, tuple(center.astype(np.int64)), radius, 0, -1)
         else:
             # Get the direction of the line
             direction = displacement / np.linalg.norm(displacement)
@@ -56,16 +56,16 @@ def draw_rect(event, x, y, flags, param):
             centers = np.array([draw_rect.start_x, draw_rect.start_y]) + np.arange(num_circles)[:, None] * direction * (radius / 2)
             # Draw the circles
             for center in centers:
-                cv2.circle(mask, tuple(center.astype(np.int)), radius, 0, -1)
+                cv2.circle(mask, tuple(center.astype(np.int64)), radius, 0, -1)
 
         canvas = cv2.bitwise_and(img, img, mask=mask)
         cv2.imshow('image', canvas)
 
 
 if __name__ == '__main__':
-    img = cv2.imread('/home/yxliu/multi_cam/monodepth/0000000003.png')
+    img = cv2.imread('/media/ukenryu/external_ssd/odaiba_dataset/camera5/data_2d_raw/sequence_1/image_00/0000000000.png')
 
-    img = cv2.resize(img, (0, 0), fx=0.5, fy=0.5)
+    img = cv2.resize(img, (0, 0), fx=1.0, fy=1.0)
     canvas = img.copy()
     mask = np.ones(img.shape[:2], dtype=np.uint8)
     last_mask = mask.copy()

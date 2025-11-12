@@ -18,7 +18,7 @@ def main(config:str="config/config.py",
          checkpoint_path:str="monodepth.pth",
          onnx_file='metaarch.onnx',
          input_names=['image', 'P2'],
-         output_names=['scores', 'bboxes', 'cls_indexes'],
+         output_names=['depths'],
          gpu:int=0,
         ):
     """_summary_

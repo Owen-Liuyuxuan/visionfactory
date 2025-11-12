@@ -68,9 +68,9 @@ def ColorizeSeg(pred_seg, rgb_image, opacity=1.0, palette=PALETTE):
 @st.cache_resource()
 def load_model():
     onnx_path_dict = {
-        "mono3d": "/home/yliuhb/vision_collection/model/det3d/dla34_deform_576_768.onnx",
-        "seg": "/home/yliuhb/vision_collection/model/segmentation/bisenetv1.onnx",
-        "depth": "/home/yliuhb/vision_collection/model/monodepth/monodepth_res101_384_1280.onnx"
+        "mono3d": "/home/ukenryu/models/det3d/hkust_dla34_576_768.onnx",
+        "seg": "/home/ukenryu/models/segmentation/bisenetv1.onnx",
+        "depth": "/home/ukenryu/python_try_new/unsupervised_monodepth/visionfactory/res34_base_256_384.onnx"
     }
     model_dict = {}
     for key in onnx_path_dict.keys():
